@@ -1,0 +1,32 @@
+{
+    "enable": "True",
+    "comment":"refer to 38.213 4.1, case A,B,C for FR1",
+    "comment":"TS38.101-1 Table 5.4.3.3-1 list SSC pattern supported for each band,",
+    "comment": "for 30khz SCS, only n5 and n66 use Base B, all other band use Case C",
+    "SSBPattern": "Case C",
+    "comment": "ssb-PositionsInBurst : Indicates the time domain positions of the transmitted SS-blocks in an SS-burst. " ,
+    "comment": "The first/ leftmost bit corresponds to SS/PBCH block index 0, the second bit corresponds to SS/PBCH block index 1, and so on",
+    "ssb_PositionsInBurst":[1,1,1,1, 0,0,0,0],
+    "_comment": "SSB period in ms",
+    "SSBperiod": 20,
+    "_comment": "kssb is 0-23 SSB carrier offset in 15khz to first SSB PRB defined in 38.212 7.1.1",
+    "kSSB": 16,
+    "comment": "offsetToPointA is PRB offset between lowest SSB and point A assuming 15KHz scs",
+    "NSSB_CRB": 20,
+    "MIB": {
+        "_comment": "subCarrierSpacingCommon ENUMERATED {scs15or60, scs30or120}, => 1 bit",
+        "subCarrierSpacingCommon": 1,
+        "_comment": "dmrs-TypeA-Position, ENUMERATED {pos2, pos3},  => 1 bit",
+        "dmrs_TypeA_Position" : 0,
+        "_comment": "pdcch-ConfigSIB1, INTEGER (0..255), => 8 bits",
+        "pdcch_ConfigSIB1": 0,
+        "_comment": "cellBarred,  ENUMERATED {barred, notBarred},  => 1 bit",
+        "cellBarred": 0,
+        "_comment": "intraFreqReselection ENUMERATED {allowed, notAllowed}, => 1 bit",
+        "intraFreqReselection": 0
+        
+    },
+    "comment": "precoding matrix",
+    "PMI":[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+}
+

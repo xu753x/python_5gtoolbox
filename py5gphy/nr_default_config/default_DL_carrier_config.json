@@ -1,0 +1,19 @@
+{
+    "name": "DL carrier config",
+    "_comment": "FR1 or FR2, default is FR1",
+    "frequency_range": "FR1",
+    "_comment": "carrier central frequency, used for time domain phase compensation",
+    "_comment": "0 means no phase compensation",
+    "carrier_frequency_in_mhz": 3840,
+    "_comment": " Physical layer cell identity",
+    "PCI":  1,
+    "_comment": "bandwidth in Mhz",
+    "BW": 40,
+    "_comment": "subcarrier space",
+    "scs": 30,
+    "num_of_ant": 1,
+    "comment": "maxMIMO_layers should not greater than num_of_ant",
+    "maxMIMO_layers": 1,
+    "duplex_type": "TDD"
+    
+  }

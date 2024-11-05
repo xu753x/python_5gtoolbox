@@ -1,0 +1,23 @@
+{
+
+        "enable": "True",
+        "comment": "The search space with the SearchSpaceId = 0 identifies the",
+        "comment": "search space configured via PBCH (MIB) and in ServingCellConfigCommon (searchSpaceZero). The number of Search Spaces per BWP is limited to 10 including the common",
+        "comment": "and UE specific Search Spaces.",
+        "searchSpaceId": 1,
+        "comment": "CORESET ID. controlResourceSetId shall be 0 if searchSpaceId=0",
+        "controlResourceSetId": 1,
+        "comment": "Slots for PDCCH Monitoring configured as periodicity and offset.",
+        "comment": "periodicity could be: 1,2,4,5,8,10,16,20,40,80,...",
+        "monitoringSlotPeriodicityAndOffset": [1, 0],
+        "comment": "Number of consecutive slots that a SearchSpace lasts in every occasion",
+        "slotduration": 1,
+        "comment": "first symbols for PDCCH to monitor, 0-13 ",
+        "FirstSymbolWithinSlot": 1,
+        "comment": "The number of candidates for AggregationLevel 1, 2, 4, 8, 16",
+        "comment": "The number of candidates could be 0, 1,2,3,4,5,6,8",
+        "NrofCandidatesPerAggregationLevel": [8, 8, 4, 2, 1],
+        "comment": "could be 'ue' or 'common' ",
+        "searchSpaceType": "ue"
+    
+}

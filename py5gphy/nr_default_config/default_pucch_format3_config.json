@@ -1,0 +1,38 @@
+{
+    "enable": "True",
+    "comment":"startingPRB",
+    "startingPRB":0,
+    "comment":"intraSlotFrequencyHopping, 'enabled' or 'disabled",
+    "intraSlotFrequencyHopping": "enabled",
+    "secondHopPRB": 1,
+    "comment":"nrofPRBs INTEGER (1..16),",
+    "nrofPRBs": 1,
+    "comment":"nrofSymbols INTEGER (1..2),",
+    "nrofSymbols": 1,
+    "comment":"startingSymbolIndex INTEGER(0..13)",
+    "startingSymbolIndex": 12,
+    "comment":"additionalDMRS true or false",
+    "additionalDMRS": "true",
+    "comment": "pi2BPSK 'enabled' or 'disabled'",
+    "pi2BPSK": "disabled",
+    "comment":"pucch-GroupHopping ENUMERATED { neither, enable disable },",
+    "comment": "pucch-GroupHopping could not be 'disable' when ruv size < 72 by 38.211 5.2.2;",
+    "comment": "ruv size = PRB_size*12",
+    "pucch_GroupHopping": "neither",
+    "comment": "hoppingId INTEGER (0..1023)",
+    "hoppingId": 0,
+    
+    "comment": "num of HARQ bits shall > 2 ",
+    "NumUCIBits": 10,
+    "comments":"bit array with length of numHARQbits,0:NACK, 1:ACK",
+    "UCIbits": [1,0,1,0],
+    
+    "comment": "NID  - Data scrambling identity (0...1023)", 
+    "NID": 1,
+    "comment": "RNTI - Radio network temporary identifier (0...65535", 
+    "RNTI": 1,
+    
+    "Periodicity_in_slot": 10,
+    "slotoffset": [0,1]
+
+}

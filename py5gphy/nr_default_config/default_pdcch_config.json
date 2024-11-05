@@ -1,0 +1,25 @@
+{
+    "enable": "True",
+    "comment":"",
+    "rnti": 1,
+    "searchSpaceId": 1,
+    "comment": "Aggregation level used: Value: 1,2,4,8,16",
+    "AggregationLevel": 1,
+    "comment": "AllocatedCandidate could be from 0 to num of candidate for AggregationLevel-1",
+    "comments": "used to select CCE resource ",
+    "comment":"for examplem, there are at most 8 AggregationLevel=1 candidate, PDCCH choose one of candidate ",
+    "AllocatedCandidate": 0,
+    
+    "comment": " DCI format",
+    "dci_format": "1_0",
+    "comment": "nunber of DCI bits",
+    "NumDCIBits": 10,
+    "data_source": [1,0,1,0],
+    
+    "comment":"PDCCH  period in slot",
+    "period_in_slot": 1,
+    "comment":"slot offset list in the period",
+    "allocated_slots":[0] ,
+    "precoding_matrix": [[1,0,0,0]]
+    
+}

@@ -1,0 +1,38 @@
+{
+    "enable": "True",
+    
+    "comment":"PRACH configuration from 38.331",
+    "config": {
+    "comment":"38.211 Table 6.3.3.2-2: Random access configurations for FR1 and paired spectrum/supplementary uplink",
+    "comment": "or Table 6.3.3.2-3: Random access configurations for FR1 and unpaired spectrum.",
+    "prach_ConfigurationIndex": 16,
+    "comment":"The number of PRACH transmission occasions FDMed in one time instance. (see TS 38.211 [16], clause 6.3.3.2). ",
+    "comment":"ENUMERATED {one, two, four, eight},",
+    "msg1_FDM": 1,
+    "comment":"Offset of lowest PRACH transmission occasion in frequency domain with respective to PRB 0.",
+    "msg1_FrequencyStart":0,
+    "comment":"Ncs configuration, see Table 6.3.3.1-5 in TS 38.211",
+    "zeroCorrelationZoneConfig":1,
+    "comment":"0-827 for LRA=839, 0-137 for LRA=139",
+    "comment":"38.211 table 6.3.3.1-3 and 6.3.3.1-4  ",
+    "prach_RootSequenceIndex":1,
+    "comment":"option for LRA139, 15 or 30",
+    "msg1_SubcarrierSpacing": 15
+    },
+    
+    "comment":"PRACH parameters selected to send PRACH preamble",
+    "parameters": {
+        "comment":"0 - 63",
+        "PreambleIndex":0,
+        "comment":"The PRACH frequency resources from 0 to msg1_FDM - 1",
+        "nRA":0,
+        "comment":"the slot in subframe to send PRACH with value 0 or 1",
+        "comment":"the value should be less than Number of PRACH slot within a subframe defined in 6.3.3.2-2 and 6.3.3.2-3",
+        "ActivePRACHslotinSubframe": 0,
+        "comment":"PRACH transmission occasion within the PRACH slot, numbered in increasing order from 0 to",
+        "comment": "N_RAslot_t −1 within a RACH slot",
+        "nRA_t":0,
+        "comment":"PRACH subframe from 0 to 9",
+        "PRACH_subframe":1
+    }
+}

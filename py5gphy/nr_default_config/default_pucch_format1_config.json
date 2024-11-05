@@ -1,0 +1,30 @@
+{
+    "enable": "True",
+    "comment":"startingPRB",
+    "startingPRB":0,
+    "comment":"intraSlotFrequencyHopping, 'enabled' or 'disabled",
+    "intraSlotFrequencyHopping": "enabled",
+    "secondHopPRB": 1,
+    "comment":"initialCyclicShift INTEGER(0..11),",
+    "initialCyclicShift": 0,
+    "comment":"nrofSymbols INTEGER (1..2),",
+    "nrofSymbols": 1,
+    "comment":"startingSymbolIndex INTEGER(0..13)",
+    "startingSymbolIndex": 12,
+    "comment":"index (0-6) for 38.211 Table 6.3.2.4.1-2: Orthogonal sequences ",
+    "timeDomainOCC":0,
+    "comment":"pucch-GroupHopping ENUMERATED { neither, enable },",
+    "comment": "pucch-GroupHopping = 'disable' is not supported because format0 ruv size < 72 by 38.211 5.2.2;",
+    "pucch_GroupHopping": "neither",
+    "comment": "hoppingId INTEGER (0..1023)",
+    "hoppingId": 0,
+
+    "comment": "num of HARQ bits, 0,1 or 2,0 means no ACK information bit ",
+    "numHARQbits": 1,
+    "comments":"bit array with length of numHARQbits,0:NACK, 1:ACK",
+    "HARQbits": [0],   
+
+    "Periodicity_in_slot": 10,
+    "slotoffset": [0,1]
+
+}

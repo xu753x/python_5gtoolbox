@@ -1,0 +1,68 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: poetry run Current File under linux",
+            "type": "debugpy",
+            "request": "launch",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: run poetry pytest  under linux",
+            "type": "debugpy",
+            "request": "launch",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "module": "pytest",
+            "args": [
+                "-v",
+                "--cov-config",
+                ".coveragerc",
+                "--cov=src",
+                "-l",
+                "-s",
+                "--tb=short",
+                "--maxfail=1",
+                "tests/"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: poetry run Current File under Windows",
+            "type": "debugpy",
+            "request": "launch",
+            "python": "${workspaceFolder}/.venv/Scripts/python",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: run poetry pytest  under Windows",
+            "type": "debugpy",
+            "request": "launch",
+            "python": "${workspaceFolder}/.venv/Scripts/python",
+            "cwd": "${workspaceFolder}",
+            "module": "pytest",
+            "args": [
+                "-v",
+                "--cov-config",
+                ".coveragerc",
+                "--cov=src",
+                "-l",
+                "-s",
+                "--tb=short",
+                "--maxfail=1",
+                "tests/"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}
