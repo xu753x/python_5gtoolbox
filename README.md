@@ -57,3 +57,6 @@ Directly installing Poetry under Windows always reports an error. we can use VSC
 The py5gphy/nr_default_config directory lists the default configuration of all channels, and the files in py5gphy/nr_waveform are the waveform generation entrances
 
 In addition, each channel can also run test cases separately. For example, to learn PDSCH, you can enter py5gphy/nr_pdsch, open nr_dlsch.py ​​or nr_pdsch.py, then run the test cases directly
+
+# additonal information
+LDPC encode optimization explanation is [here](./docs/LDPC_encoder_optimization.pdf)

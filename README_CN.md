@@ -56,3 +56,6 @@ Windows下直接安装Poetry总是报错，通过VScode Create venv，然后就�
 py5gphy/nr_default_config目录列出所有channel的default配置，py5gphy/nr_waveform里面的文件时waveform geeration入口
 
 另外每个channel还可以单独运行测试用例，比如学些PDSCH，可以进入py5gphy/nr_pdsch,打开nr_dlsch.py or nr_pdsch.py.直接运行里面的测试用例
+
+# additonal information
+LDPC encode optimization explanation is [here](./docs/LDPC_encoder_optimization.pdf)

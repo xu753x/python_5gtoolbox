@@ -81,6 +81,7 @@ def _gen_ldpc_parity_bit(H, ck, Zc, K, N,bgn):
     
     #optimization based on 'Flexible 5G New Radio LDPC Encoder Optimized for High Hardware Usage Efficiency'
     #https://www.mdpi.com/2079-9292/10/9/1106
+    #can also refer to docs/LDPC_encoder_optimization.pdf
 
     #start = time.time() below code use at most 0.4second
     #for optimized method
