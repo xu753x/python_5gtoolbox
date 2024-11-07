@@ -36,43 +36,43 @@ def zip_files(path, name_pre, splitsize):
     
 if __name__ == "__main__":
     #path = "tests/nr_pusch/testvectors_ulsch_without_uci"
-    #zip_files(path, "testvectors_ulsch_without_uci", 1000)
+    #zip_files(path, "testvectors_ulsch_without_uci", 200)
 
     #path = "tests/nr_pusch/testvectors_ulsch_with_uci"
-    #zip_files(path, "testvectors_ulsch_with_uci", 1000)
+    #zip_files(path, "testvectors_ulsch_with_uci", 200)
 
     #path = "tests/nr_pusch/testvectors_pusch"
-    #zip_files(path, "testvectors_pusch", 200)
+    #zip_files(path, "testvectors_pusch", 50)
 
     #path = "tests/nr_pucch/testvectors_format0"
-    #zip_files(path, "testvectors_format0", 2000)
+    #zip_files(path, "testvectors_pucch_format0", 2000)
 
     #path = "tests/nr_pucch/testvectors_format1"
-    #zip_files(path, "testvectors_format1", 2000)
+    #zip_files(path, "testvectors_pucch_format1", 2000)
 
     #path = "tests/nr_pucch/testvectors_format2"
-    #zip_files(path, "testvectors_format2", 2000)
+    #zip_files(path, "testvectors_pucch_format2", 2000)
 
     #path = "tests/nr_pucch/testvectors_format3"
-    #zip_files(path, "testvectors_format3", 2000)
+    #zip_files(path, "testvectors_pucch_format3", 100)
 
     #path = "tests/nr_pucch/testvectors_format4"
     #zip_files(path, "testvectors_format4", 2000)
 
     #path = "tests/nr_srs/testvectors"
-    #zip_files(path, "testvectors_srs", 2000)
+    #zip_files(path, "testvectors_srs", 200)
 
     #path = "tests/nr_prach/testvectors_prach_seq"
     #zip_files(path, "testvectors_prach_seq", 2000)
 
     #path = "tests/nr_prach/testvectors_prach"
-    #zip_files(path, "testvectors_prach", 500)
+    #zip_files(path, "testvectors_prach", 100)
 
     #path = "tests/nr_csirs/testvectors"
     #zip_files(path, "testvectors_csirs", 2000)
 
     #path = "tests/common/testvectors_lowPAPR"
-    #zip_files(path, "testvectors_lowPAPR", 3000)
+    #zip_files(path, "testvectors_lowPAPR", 800)
 
     #path = "tests/common/testvectors_modulation"
     #zip_files(path, "testvectors_modulation", 3000)
@@ -87,31 +87,31 @@ if __name__ == "__main__":
     #zip_files(path, "testvectors_smallblock", 3000)
 
     #path = "tests/nr_pdsch/testvectors_dlsch"
-    #zip_files(path, "testvectors_dlsch", 3000)
+    #zip_files(path, "testvectors_dlsch", 500)
 
     #path = "tests/nr_pdsch/testvectors"
-    #zip_files(path, "testvectors_pdsch", 30)
-    
-   #path = "tests/nr_lowphy/testvectors"
-    #zip_files(path, "testvectors_nr_lowphy", 30)
-
-    #path = "tests/nr_pdcch/testvectors"
-    #zip_files(path, "testvectors_nr_pdcch", 3000)
-
-    #path = "tests/nr_ssb/testvectors"
-    #zip_files(path, "testvectors_nr_ssb", 10)
-
-    #path = "tests/nr_ssb/testvectors_highphy"
-    #zip_files(path, "testvectors_ssb_highphy", 30)
-
-    #path = "tests/nr_waveform/testvectors"
-    #zip_files(path, "testvectors_nrPDSCH_mixed_testvec", 2)
+    #zip_files(path, "testvectors_pdsch", 10)
 
     #path = "tests/nr_pdsch/testvectors_short_pdsch"
     #zip_files(path, "testvectors_nrPDSCH_mixed_testvec", 100)
+    
+    #path = "tests/nr_lowphy/testvectors"
+    #zip_files(path, "testvectors_nr_lowphy", 6)
 
+    #path = "tests/nr_pdcch/testvectors"
+    #zip_files(path, "testvectors_nr_pdcch", 200)
+
+    #path = "tests/nr_ssb/testvectors"
+    #zip_files(path, "testvectors_nr_ssb", 5)
+
+    #path = "tests/nr_ssb/testvectors_highphy"
+    #zip_files(path, "testvectors_ssb_highphy", 10)
+
+    #path = "tests/nr_waveform/testvectors"
+    #zip_files(path, "testvectors_nrPDSCH_mixed_testvec", 1)
+    
     #path = "tests/nr_testmodel/testvectors"
-    #zip_files(path, "nr_testmodel_testvec", 100)
+    #zip_files(path, "nr_testmodel_testvec", 20)
 
     aaaa=1
 
