@@ -4,6 +4,7 @@ from scipy import io
 import os
 import numpy as np
 import math
+from zipfile import ZipFile
 
 from tests.nr_pusch import nr_pusch_testvectors
 from py5gphy.nr_pusch import nr_pusch_dmrs
