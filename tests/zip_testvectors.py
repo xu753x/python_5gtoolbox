@@ -113,6 +113,9 @@ if __name__ == "__main__":
     #path = "tests/nr_testmodel/testvectors"
     #zip_files(path, "nr_testmodel_testvec", 20)
 
+    path = "tests/demodulation/testvectors"
+    zip_files(path, "nr_demodulation_testvec", 20)
+
     aaaa=1
 
 
