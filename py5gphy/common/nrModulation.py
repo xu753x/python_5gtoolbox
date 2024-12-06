@@ -7,7 +7,7 @@ def nrModulate(inbits, modtype):
     mod_data = nrModulate(inbits, modtype)
     """
     modtype = modtype.lower()
-    assert modtype in ["pi/2-bpsk", "bpsk", "qpsk", "16qam", "64qam", "256qam"], "modulation type is incorrect"
+    assert modtype in ["pi/2-bpsk", "bpsk", "qpsk", "16qam", "64qam", "256qam", "1024qam"], "modulation type is incorrect"
 
     b = inbits.astype('f') #convert to float32
     N = b.size
@@ -37,7 +37,11 @@ def nrModulate(inbits, modtype):
         mod_data = ((1-2*b[0::8]) * (8 - (1-2*b[2::8])*(4 - (1-2*b[4::8])*(2-(1-2*b[6::8]))))
                + 1j*(1-2*b[1::8]) * (8 - (1-2*b[3::8])*(4 - (1-2*b[5::8])*(2-(1-2*b[7::8]))))
                     )/math.sqrt(170)
-
+    elif modtype == "1024qam":
+        assert N % 10 == 0, "length of databits must be multiple of 10"
+        mod_data = ((1-2*b[0::10]) * (16 - (1-2*b[2::10])*(8 - (1-2*b[4::10])*(4 - (1-2*b[6::10])*(2-(1-2*b[8::10])))))
+               + 1j*(1-2*b[1::10]) * (16 - (1-2*b[3::10])*(8 - (1-2*b[5::10])*(4 - (1-2*b[7::10])*(2-(1-2*b[9::10])))))
+                    )/math.sqrt(682)
     return mod_data
 
 
