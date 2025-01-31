@@ -108,6 +108,60 @@ def _get_crcpoly(poly):
 
     return crcpoly
 
+def gen_crc_mask(K, padCRC, rnti):
+    """ generate CRC mask: CRC value with input [np.ones(24), np.zeros(K)] 
+        K: information bit size, not include CRC size
+        padCRC: 1: padding 24 '1' ahead of CRC data for CRC encoder which is used by DL DCI
+                0: no padding which is used by DL BCH
+        rnti: used by DL DCI CRC mask
+    """
+    if padCRC == 1:
+        #get CRC mask: CRC value with [np.ones(24), np.zeros(K-24)] 
+        data = [1]*24 + list(np.zeros(K , 'i1'))
+        blkandcrc = nr_crc_encode(np.array(data, 'i1'), '24C', rnti)
+        crc_mask = blkandcrc[-24:]
+    else:
+        crc_mask = np.zeros(24, 'i1')
+    return crc_mask
+
+def check_distributed_CRC24C(ck, crc_bit_loc, crcidx_matrix,crc_mask):
+    """ verify distributed CRC 24C at one CRC bit location
+        ck:  bit sequence without polar interleaving
+        crc_bit_loc: CRC bit location from 0 to 23
+        
+    """
+    K = np.array(ck).size
+    
+    #get bits locations that is used to calculate CRC bit=phase
+    column = crcidx_matrix[:,crc_bit_loc]
+    locs = column[column>=0]
+    
+    #add data together with mod 2
+    cal_crc_bit = ((sum(ck[locs]) % 2) + crc_mask[crc_bit_loc]) %2
+
+    polar_crc_bit = ck[K-24+crc_bit_loc] #CRC bit calculated by polar decoder
+
+    return cal_crc_bit == polar_crc_bit
+    
+def gen_CRC24C_encoding_matrix(K):
+    """ gen CRC encoding matrix for CRC24C
+        K: informartion bit size, not include CRC 
+        crcidx_matrix: CRC index matrix, -1 means not involved
+            each column show that CRC input data indexs that are involed for this bit CRC calculation
+    """
+    L = 24  # CRC size
+    crcidx_matrix = np.zeros((K,L),'i2')
+    for n in range(K):
+        inbits = np.zeros(K,'i1')
+        inbits[n] = 1
+        blkandcrc = nr_crc_encode(inbits, '24C')
+        crc_bits = blkandcrc[-L:]
+        crcidx_matrix[n,:] = crc_bits*(n+1)   
+
+    crcidx_matrix = crcidx_matrix -1
+    return crcidx_matrix
+
+
 if __name__ == "__main__":
     print("test crc encode")
     from tests.crc import test_crc

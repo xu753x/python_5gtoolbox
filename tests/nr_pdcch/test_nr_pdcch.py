@@ -12,7 +12,7 @@ from py5gphy.common import nr_slot
 
 def get_testvectors():
     path = "tests/nr_pdcch/testvectors"
-    if len(os.listdir(path)) < 10: #desn't unzip testvectors
+    if len(os.listdir(path)) < 20: #desn't unzip testvectors
         zipfile_lists = []
         for f in os.listdir(path):
             if f.endswith(".zip"):
