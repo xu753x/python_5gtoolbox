@@ -138,6 +138,23 @@ def getH(Zc, bgn, iLS):
                    
     return H
 
+def gen_ldpc_para(N, bgn):
+    if bgn == 1:
+        Zc = N // 66
+        K = 22 * Zc
+    else:
+        Zc = N // 50
+        K = 10 * Zc
+    
+    #step 1: Find the set with index iLS in Table 5.3.2-1 which contains Zc
+    iLS = find_iLS(Zc)
+    assert iLS < 8
+
+    #step 2 : get H
+    H = getH(Zc, bgn, iLS)
+
+    return H, K, Zc
+
 if __name__ == "__main__":
     #find_iLS(2)
     H = getH(4, 1, 0)

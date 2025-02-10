@@ -98,7 +98,12 @@ for decoder in test_decoders:
                     blkandcrc = blkandcrc[24:]
 
                 encodedbits =  nr_polar_encoder.encode_polar(blkandcrc, E, nMax, iIL)
-                LLRin = (1-2*encodedbits) + np.random.normal(0, 10**(-snr_db/20), encodedbits.size)
+                
+                en = 1 - 2*encodedbits #BPSK modulation, 0 -> 1, 1 -> -1
+                fn = en + np.random.normal(0, 10**(-snr_db/20), en.size) #add noise
+                #LLR is log(P(0)/P(1)) = (-(x-1)^2+(x+1)^2)/(2*noise_power) = 4x/(2*noise_power) = 2x/noise_power
+                noise_power = 10**(-snr_db/10)
+                LLRin = fn/noise_power
 
                 if decoder == 'SC':
                     decbits, status = nr_polar_decoder_SC.nr_decode_polar_SC(LLRin, E, blkandcrc.size, nMax, iIL)

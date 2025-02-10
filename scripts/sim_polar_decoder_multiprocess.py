@@ -54,7 +54,7 @@ def gen_pool_list():
     padCRC = testcase[5]
     rnti = testcase[6]   
 
-    snr_range = np.arange(0.5, 3.5, 0.5).tolist() 
+    snr_range = np.arange(0, 3, 0.4).tolist() 
     test_decoders = ['SC','SC_optionB','SCL','SCL_optionB']
     L_range = [8,16,32]
     
@@ -79,9 +79,9 @@ def gen_pool_list():
                     elif snr_db <= 3:
                         testcounts = 20 * process_testcount
                     elif snr_db <= 3.5:
-                        testcounts = 200 * process_testcount
+                        testcounts = 40 * process_testcount
                     else:
-                        testcounts = 10**3 * process_testcount
+                        testcounts = 10**2 * process_testcount
 
                 #generate one test for each 100 testcounts
                 for _ in range(testcounts // process_testcount):
@@ -104,7 +104,12 @@ def verify_polar_decoder(decoder,K,E,nMax,iIL,CRCLEN,padCRC,rnti,L,snr_db,counts
             blkandcrc = blkandcrc[24:]
 
         encodedbits =  nr_polar_encoder.encode_polar(blkandcrc, E, nMax, iIL)
-        LLRin = (1-2*encodedbits) + np.random.normal(0, 10**(-snr_db/20), encodedbits.size)
+        
+        en = 1 - 2*encodedbits #BPSK modulation, 0 -> 1, 1 -> -1
+        fn = en + np.random.normal(0, 10**(-snr_db/20), en.size) #add noise
+        #LLR is log(P(0)/P(1)) = (-(x-1)^2+(x+1)^2)/(2*noise_power) = 4x/(2*noise_power) = 2x/noise_power
+        noise_power = 10**(-snr_db/10)
+        LLRin = fn/noise_power
 
         if decoder == 'SC':
             decbits, status = nr_polar_decoder_SC.nr_decode_polar_SC(LLRin, E, blkandcrc.size, nMax, iIL)

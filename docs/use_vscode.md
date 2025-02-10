@@ -39,3 +39,4 @@
     * recreate the virtual environment
     * run my debug launch config specified in ./.vscode/launch.json (via F5)
     * redirect missing python interpreter path to the one specified in the venv
+
