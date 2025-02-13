@@ -25,19 +25,26 @@ bgn = 1 #bgn in [1,2]
 crcpoly = '24A'  #default value, no need change in the simulation
 
 #LDPC decoder config
-#algo_list = [ 'BP', 'min-sum', 'NMS', 'OMS', 'mixed-MS']
-algo_list = [ 'BP', 'min-sum', 'NMS', 'OMS','mixed-MS']
+#algo_list = [ 'BP', 'min-sum', 'NMS', 'OMS','mixed-MS']
+algo_list = [ 'BP', 'NMS', 'OMS','mixed-MS']
 
-alpha_list = [0.8, 0.5] #used for NMS only
-beta_list = [0.3, 0.1]  #used for OMS only
+#alpha_list = [0.8, 0.5] #used for NMS only
+alpha_list = [0.5] #used for NMS only
+
+#beta_list = [0.3, 0.1]  #used for OMS only
+beta_list = [0.3]  #used for OMS only
+
 mixed_list = [[0.8, 0.3]] #used for mixed-min-sum, provide [alpha,beta] pair
-L_list = [32] #ldpc decoder iteration number
+#L_list = [32] #ldpc decoder iteration number
+L_list = [32, 16, 64] #ldpc decoder iteration number
 
 #simulation config
-snr_db_list = np.arange(-1, 1.5, 0.5).tolist()
+#snr_db_list = np.arange(-1, 1.5, 0.5).tolist()
+snr_db_list = np.arange(-1, 1, 0.5).tolist()
+
 test_count_seed = 300 #used to generate total test count for each snr
-filename = "out/ldpc_decode_result_all.pickle" #test result save to this file
-figfile = "out/ldpc_decode_result_all.png"     #plt draw figure saveto this file
+filename = "out/ldpc_decode_result_for_L.pickle" #test result save to this file
+figfile = "out/ldpc_decode_result_for_L.png"     #plt draw figure saveto this file
 sim_flag = 1  #if 1, start LDPC dsimulation, if 0, no simulation, read from filename and does test result analysis
 
 
