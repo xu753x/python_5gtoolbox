@@ -158,7 +158,7 @@ if __name__ == "__main__":
     
             #LLR is log(P(0)/P(1)) = (-(x-1)^2+(x+1)^2)/(2*noise_power) = 4x/(2*noise_power) = 2x/noise_power
             noise_power = 10**(-snr_db/10)
-            LLRin = fn/noise_power
+            LLRin = 2*fn/noise_power
 
             #dn occupy c[2Zc:K], w[0:N+2Zc-K], LLRin need add 2Zc '0' ahead of data
             LLRin = np.concatenate((np.zeros(2*Zc), LLRin))

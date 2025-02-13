@@ -8,181 +8,114 @@ import pickle
 
 from py5gphy.ldpc import ldpc_info
 from py5gphy.ldpc import nr_ldpc_decode
+from scripts.internal import sim_ldpc_internal
 
-def gen_pool_list():
-    """ generate testlist for pool mapping
-    """
-    #algo_list = ["BF", "BP", "min-sum"]
-    algo_list = ["min-sum","BP"]
+"""the script is used to simulate soft-decision LDPC decoder performance
+it support [ 'BP', 'min-sum', 'NMS', 'OMS', 'mixed-min-sum] algorithms
+'BP: 'belief propagation' or 'sum-product' in other name
+'min-sum': 'min-sum'
+'NMS': normalized min-sum with alpha in (0,1) and beta = 0
+'OMS': offset min-sum, with alpha = 1 and beta in (0,1)
+'mixed-MS': combination of NMS and OMS, with alpha in (0,1) and beta in (0,1)
+"""
 
-    #for min-sum
-    #alpha_range = [0.1,0.3,0.5,0.7,0.9,1]
-    alpha_range = [1, 0.8, 0.5, 0.3]
-    #beta_range = [0, 0.2, 0.4, 0.6, 1, 2]
-    beta_range = [0, 0.1, 0.3, 0.6, 1]
+#5G LDPC config, Zc and bgn
+Zc = 10  # Z value in 38.211 Table 5.3.2-1: Sets of LDPC lifting size Z
+bgn = 1 #bgn in [1,2]
+crcpoly = '24A'  #default value, no need change in the simulation
 
-    #L_list = [16,32,64] #max itererate size
-    L_list = [32]
-    #snr_range = np.arange(-1, 1.2, 0.2).tolist()
-    snr_range = np.arange(-1, 1.2, 0.3).tolist()
+#LDPC decoder config
+#algo_list = [ 'BP', 'min-sum', 'NMS', 'OMS', 'mixed-MS']
+algo_list = [ 'BP', 'min-sum', 'NMS', 'OMS','mixed-MS']
 
-    N = 660
-    bgn = 1
+alpha_list = [0.8, 0.5] #used for NMS only
+beta_list = [0.3, 0.1]  #used for OMS only
+mixed_list = [[0.8, 0.3]] #used for mixed-min-sum, provide [alpha,beta] pair
+L_list = [32] #ldpc decoder iteration number
 
-    H, K, Zc = ldpc_info.gen_ldpc_para(N, bgn)
-    M = H.shape[0]
+#simulation config
+snr_db_list = np.arange(-1, 1.5, 0.5).tolist()
+test_count_seed = 300 #used to generate total test count for each snr
+filename = "out/ldpc_decode_result_all.pickle" #test result save to this file
+figfile = "out/ldpc_decode_result_all.png"     #plt draw figure saveto this file
+sim_flag = 1  #if 1, start LDPC dsimulation, if 0, no simulation, read from filename and does test result analysis
 
-    #gen testcases
-    testlist = []
-    for algo in algo_list:
-        if algo in ["BF", "BP"]:
-            for L in L_list:
-                for snr in snr_range:
-                    tmp = 200
-                    if snr < 0:
-                        max_count = tmp
+
+########################## main function ############################
+if sim_flag == 0:
+    algo_list = [] #disable long time LDPC encoder/.decoder
+
+test_results_list = []
+test_config_list = []
+for algo in algo_list:
+
+    #get number of test for the algo
+    if algo in ['BP', 'BF','min-sum']:
+        test_num = 1
+    elif algo == 'NMS':
+        test_num = len(alpha_list)
+    elif algo == 'OMS':
+        test_num = len(beta_list)
+    else:
+        test_num = len(mixed_list)
+    
+    #simulate each test
+    for L in L_list:
+        for test_idx in range(test_num):
+        
+            #add to test_result
+            if algo in ['BF', 'BP', 'min-sum']:
+                test_flag = '{} L={}'.format(algo, L)
+            elif algo == 'NMS':
+                test_flag = 'NMS-alpha={}-L={}'.format(alpha_list[test_idx], L)
+            elif algo == 'OMS':
+                test_flag = 'OMS-beta={}-L={}'.format(beta_list[test_idx], L)
+            else:
+                test_flag = 'mixed-MS-[alpha,beta]=[{},{}]-L={}'.format(mixed_list[test_idx][0], mixed_list[test_idx][1],L)
+        
+            test_config_list.append(test_flag)
+
+            bler_result = [] #bler_result save bler value for each snr_db
+            for snr_db in snr_db_list:
+                start = time.time()
+                #get total test count, higher snr need more simulation
+                if snr_db < 0:
+                    total_count = test_count_seed
+                elif snr_db == 0:
+                    total_count = test_count_seed*4
+                else:
+                    total_count = test_count_seed * 15
+            
+                failed_count = 0
+                for _ in range(total_count):
+                    blkandcrc, dn, LLRin = nr_ldpc_decode.for_test_5g_ldpc_encoder(Zc, bgn, snr_db, crcpoly)
+                    if algo in ['BF', 'BP', 'min-sum']:
+                        blkandcrc_decoded, ck_decoded, status = nr_ldpc_decode.nr_decode_ldpc(LLRin, Zc, bgn, L, algo,alpha=1, beta=0)
+                    elif algo == 'NMS':
+                        blkandcrc_decoded, ck_decoded, status = nr_ldpc_decode.nr_decode_ldpc(LLRin, Zc, bgn, L, 'min-sum',alpha=alpha_list[test_idx], beta=0)
+                    elif algo == 'OMS':
+                        blkandcrc_decoded, ck_decoded, status = nr_ldpc_decode.nr_decode_ldpc(LLRin, Zc, bgn, L, 'min-sum',alpha=1, beta=beta_list[test_idx])
                     else:
-                        max_count = tmp*5
-                    testlist.append([H, K, Zc, algo, 1, 0, L, snr, max_count])
-        else:
-            #first add beta=0 only
-            beta = 0
-            for alpha in alpha_range:
-                for L in L_list:
-                    for snr in snr_range:
-                        tmp = 200
-                        if snr < 0:
-                            max_count = tmp
-                        else:
-                            max_count = tmp*5
-                        testlist.append([H, K, Zc, algo, alpha, beta, L, snr, max_count])
+                        blkandcrc_decoded, ck_decoded, status = nr_ldpc_decode.nr_decode_ldpc(LLRin, Zc, bgn, L, 'min-sum',alpha= mixed_list[test_idx][0], beta= mixed_list[test_idx][1])
+                
+                    #check result
+                    if not np.array_equal(blkandcrc, blkandcrc_decoded):
+                        failed_count += 1
             
-            #first add alpha=1 only
-            alpha = 1
-            for beta in beta_range[1:]:
-                for L in L_list:
-                    for snr in snr_range:
-                        tmp = 200
-                        if snr < 0:
-                            max_count = tmp
-                        else:
-                            max_count = tmp*5
-                        testlist.append([H, K, Zc, algo, alpha, beta, L, snr, max_count])
+                bler_result.append(failed_count/total_count) #add bler value
+                print("finish test {}, snr_db={}, bler={:2.5f},elpased time: {:6.6f}".format(test_flag, snr_db,failed_count/total_count,time.time() - start))
+                        
+            test_results_list.append(bler_result) #test_results_list save bler list for each algo
 
-    return testlist, snr_range, N, M
+#dump results to pickle file after simulation for post-processing
+if sim_flag == 1:
+    sim_config = {'Zc':Zc, 'bgn':bgn }
+    with open(filename, 'wb') as handle:
+        pickle.dump([sim_config, test_config_list,test_results_list], handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-def verify_ldpc_decoder(H, K, Zc, algo, alpha, beta, L, snr, max_count):
-    if algo in ["BF", "BP"]:
-        print("process pid is {}, algo={}, L={},snr={}".format(os.getpid(), algo, L, snr))
-    else:
-        print("process pid is {}, algo={}, alpha={}, bets={},L={},snr={}".format(os.getpid(), algo, alpha, beta,L, snr))
-    
-    #main code
-    failed_count = 0
-    for count in range(max_count):
-        dn, LLRin = nr_ldpc_decode.for_test_ldpc_encoder(K, H, snr)
-        dn_decoded, status = nr_ldpc_decode.decode_ldpc(LLRin, H, L, algo, alpha, beta)
-        if not np.array_equal(dn,dn_decoded):
-            failed_count += 1
+with open(filename, 'rb') as handle:
+    [sim_config, test_config_list,test_results_list] = pickle.load(handle)
 
-    if algo in ["BF", "BP"]:
-        print("done process pid is {}, algo={}, L={},snr={},bler={:3.2f}%".format(os.getpid(), algo, L, snr,failed_count/max_count*100))
-    else:
-        print("done process pid is {}, algo={}, alpha={}, bets={},L={},snr={},bler={:3.2f}%".format(os.getpid(), algo, alpha, beta,L, snr,failed_count/max_count*100))
-    return [[H, K, Zc, algo, alpha, beta, L, snr, max_count], failed_count]
+sim_ldpc_internal.draw_ldpc_decoder_result(snr_db_list, sim_config, test_config_list, test_results_list, figfile)
 
-
-
-if __name__ == '__main__':
-    testlist, snr_range, N, M = gen_pool_list()
-
-    test_config_list = []
-    test_results_list = []
-    filename = 'ldpc_decoder_bp_ms.pickle'
-
-    if 1:
-    #    for testcase in testlist:
-    #        start = time.time()
-                             #H, K, Zc, algo, alpha, beta, L, snr, max_count)
-    #        result = verify_ldpc_decoder( testcase[0],testcase[1],testcase[2], #H, K, Zc
-    #                                     testcase[3],testcase[4],testcase[5], #algo, alpha, beta
-    #                                     testcase[6],testcase[7],testcase[8], #L, snr, max_count
-    #                                )
-        start = time.time()                
-        with Pool(4) as p:
-          for result in p.starmap(verify_ldpc_decoder, testlist):                                     
-            algo = result[0][3]
-            alpha = result[0][4]
-            beta =result[0][5]
-            L = result[0][6]
-            snr = result[0][7]
-            max_count = result[0][8]
-            failed_count = result[1]
-
-            bler = failed_count/max_count
-
-            test_cfg = [algo, alpha, beta, L]
-
-            #add test_cfg to test_config_list and add init test_result to test_results_list
-            if test_cfg not in test_config_list:
-                test_config_list.append(test_cfg)
-                test_result = [[snr,0] for snr in snr_range]
-                test_results_list.append(test_result)
-            
-            #add test result into correspondent test_results_list
-            idx = test_config_list.index(test_cfg)
-            test_result = test_results_list[idx]
-
-            for i ,value in  enumerate(test_result):
-                if value[0] == snr:
-                    sub_idx = i
-                    break
-
-            test_result[sub_idx][1] =bler
-        
-        print("ldpc decoder elpased time: {:6.6f}".format(time.time() - start))
-
-        #dump results to pickle file for post-processing
-        with open(filename, 'wb') as handle:
-            pickle.dump([test_config_list,test_results_list], handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    with open(filename, 'rb') as handle:
-        [test_config_list,test_results_list] = pickle.load(handle)
-
-    #test is done, draw the picture
-    marker_list = [".","o","v","<",">","P","*","+","x","D","d"]
-    marker_count = 0
-    plt.xlabel("Eb/N0")
-    plt.ylabel("BLER")
-    plt.title("ldpc decoder, N={}, M={}".format(N,M))
-    plt.yscale("log")
-    plt.xlim(snr_range[0]-0.5,snr_range[-1]+0.5)
-    plt.ylim(10**(-4),1)
-    plt.grid(True)
-
-    for idx, testcfg in enumerate(test_config_list):
-        algo = testcfg[0]
-        alpha = testcfg[1]
-        beta = testcfg[2]
-        L = testcfg[3]
-
-        #for min-sum, plot only normalized(beta =0) or offset(alpha=1)
-        
-        if algo == "min-sum":
-            set_label = "{},alpha={},beta={},L={}".format(algo, alpha, beta, L)
-        else:
-            set_label = "{},L={}".format(algo, L)
-
-        xd = [snr for snr, bler in test_results_list[idx]]
-        yd = [bler for snr, bler in test_results_list[idx]]
-        plt.plot(xd, yd, marker=marker_list[marker_count], label=set_label)
-        marker_count =(marker_count+1) % len(marker_list)
-
-    plt.legend(loc="upper right",fontsize=5)
-    plt.savefig("ldpc_decoder_bp_ms.png") #plt.show() didn't work if remotely accessing linux platform, save to picture
-    plt.ion()
-    plt.show(block=False)  #the cmd show plot for windows platform
-    plt.pause(0.01)
-    
-
-    pass
+pass
