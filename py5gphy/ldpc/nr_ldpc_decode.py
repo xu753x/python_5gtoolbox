@@ -8,6 +8,46 @@ from py5gphy.ldpc import ldpc_decoder_bit_flipping
 from py5gphy.crc import crc
 from py5gphy.ldpc import nr_ldpc_encode
 
+def nr_decode_ldpc(LLRin, Zc, bgn, L, algo='min-sum',alpha=1, beta=0):
+    """ LDPC decode following to TS38.212 5.3.2
+    ck = encode_ldpc(dn, bgn)
+    input: 
+        LLRin: N length LDPC decoder LLR input data
+        bgn: base graph value 1 or 2
+        crcpoly: one of ['24A','24B','16']
+        algo: ["BF", "BP", "min-sum"]
+    output:
+        ck: K length LDPC decoded sequence
+    
+    """
+    assert bgn in [1,2]
+    assert algo in ['BF', 'BP', 'min-sum']
+    
+    if bgn == 1:
+        N = Zc * 66
+        K = Zc * 22
+    else:
+        N = Zc * 50
+        K = Zc * 10
+    
+    assert N == LLRin.size
+    
+    #step 1: Find the set with index iLS in Table 5.3.2-1 which contains Zc
+    iLS = ldpc_info.find_iLS(Zc)
+    assert iLS < 8
+
+    #step 2 : get H
+    H = ldpc_info.getH(Zc, bgn, iLS)
+
+    #add ounctured 2*Zc information bits to get full ldpc decoder input
+    newLLRin = np.concatenate([np.zeros(2*Zc), LLRin])
+
+    ck, status =  decode_ldpc(newLLRin, H, L, algo, alpha, beta)
+
+    blkandcrc = ck[0:K]
+    
+    return blkandcrc, ck, status
+
 def decode_ldpc(LLRin, H, L, algo='min-sum', alpha=1, beta=0):
     """ LDPC decoder, support BF(bit flipping), BP(belief propagation), min-sum algorithms
     BP is also named sum-product algorithm
@@ -183,70 +223,6 @@ def _min_sum_process(sel_Lq, A, Lr,m, alpha, beta):
     
     return Lr
 
-def nr_decode_ldpc(LLRin, Zc, bgn, L, algo='min-sum',alpha=1, beta=0):
-    """ LDPC decode following to TS38.212 5.3.2
-    ck = encode_ldpc(dn, bgn)
-    input: 
-        LLRin: N length LDPC decoder LLR input data
-        bgn: base graph value 1 or 2
-        crcpoly: one of ['24A','24B','16']
-        algo: ldpc decoder algorithm
-    output:
-        ck: K length LDPC decoded sequence
-    
-    """
-    assert bgn in [1,2]
-    assert algo in ['BF', 'BP', 'min-sum']
-    
-    if bgn == 1:
-        N = Zc * 66
-        K = Zc * 22
-    else:
-        N = Zc * 50
-        K = Zc * 10
-    
-    assert N == LLRin.size
-    
-    #step 1: Find the set with index iLS in Table 5.3.2-1 which contains Zc
-    iLS = ldpc_info.find_iLS(Zc)
-    assert iLS < 8
-
-    #step 2 : get H
-    H = ldpc_info.getH(Zc, bgn, iLS)
-
-    #add ounctured 2*Zc information bits to get full ldpc decoder input
-    newLLRin = np.concatenate([np.zeros(2*Zc), LLRin])
-
-    ck, status =  decode_ldpc(newLLRin, H, L, algo, alpha, beta)
-
-    blkandcrc = ck[0:K]
-    
-    return blkandcrc, ck, status
-
-def for_test_ldpc_encoder(K, H, snr_db):
-    ck = np.random.randint(2, size=K)
-    #ldpc encoder to get parity bits
-    Hrowsize = H.shape[0]
-    Hcolsize = H.shape[1]
-    H1 = H[:,0:Hcolsize-Hrowsize]
-    H2 = H[:,Hcolsize-Hrowsize:Hcolsize]
-
-    L1 = -H1 @ ck.T  #matrix multiply
-    outd = np.linalg.solve(H2, L1) #outd = H2\L1;
-    wn = np.round(outd) % 2
-    wn = wn.astype('i1')
-
-    dn = np.concatenate((ck, wn))
-
-    en = 1 - 2*dn #BPSK modulation, 0 -> 1, 1 -> -1
-    fn = en + np.random.normal(0, 10**(-snr_db/20), dn.size) #add noise
-    
-    #LLR is log(P(0)/P(1)) = (-(x-1)^2+(x+1)^2)/(2*noise_power) = 4x/(2*noise_power) = 2x/noise_power
-    noise_power = 10**(-snr_db/10)
-    LLRin = 2*fn/noise_power
-
-    return dn, LLRin
-
 def for_test_5g_ldpc_encoder(Zc, bgn, snr_db,crcpoly='24A'):
     """ generate 5G LLRin for LDPC decoder test using BPSK modulation
     """
@@ -285,108 +261,20 @@ if __name__ == "__main__":
     import os
     from py5gphy.crc import crc
     from py5gphy.ldpc import nr_ldpc_encode
-    import pickle
-    import matplotlib.pyplot as plt
-
-    Zc = 10
-    bgn = 1
-    crcpoly = '24A'
-    L = 32
     
-    #algo_list = ['BF', 'BP', 'min-sum', 'NMS', 'OMS']
-    #algo_list = [ 'BP', 'min-sum', 'NMS', 'OMS']
-    #algo_list = [ 'NMS', 'OMS']
-    algo_list = ['min-sum']
-    #algo_list = ['BP']
-    alpha_list = [0.8, 0.5]
-    beta_list = [0.3, 0.1]
-    snr_db_list = np.arange(-1, 1.5, 0.5).tolist()
-    #snr_db_list = np.arange(-1, 1.2, 0.3).tolist()
+    print("test LDPC soft decision decoder")
+    from tests.ldpc import test_ldpc_decoder_soft
+    file_lists = test_ldpc_decoder_soft.get_testvectors()
+    count = 1
+    for filename in file_lists:
+        print("count= {}, filename= {}".format(count, filename))
+        count += 1
+        test_ldpc_decoder_soft.test_nr_ldpc_decode_BP(filename)
+        test_ldpc_decoder_soft.test_nr_ldpc_decode_min_sum(filename)
+        test_ldpc_decoder_soft.test_nr_ldpc_decode_NMS(filename)
+        test_ldpc_decoder_soft.test_nr_ldpc_decode_OMS(filename)
+        test_ldpc_decoder_soft.test_nr_ldpc_decode_mixed_min_sum(filename)
 
-    filename = "out/ldpc_decode_result_all.pickle"
-    figfile = "out/ldpc_decode_result_all.png"
-
-    sim_flag = 1
-    
-    if sim_flag == 0:
-        algo_list = [] #disable long time LDPC encoder/.decoder
-
-    test_results_list = []
-    test_config_list = []
-    for algo in algo_list:
-        if algo in ['BP', 'BF','min-sum']:
-            test_num = 1
-        elif algo == 'NMS':
-            test_num = len(algo_list)
-        else:
-            test_num = len(beta_list)
-        
-        for test_idx in range(test_num):
-            #add to test_result
-            if algo in ['BF', 'BP', 'min-sum']:
-                test_flag = algo
-            elif algo == 'NMS':
-                test_flag = 'NMS-alpha={}'.format(alpha_list[test_idx])
-            else:
-                test_flag = 'OMS-beta={}'.format(beta_list[test_idx])
-            
-            test_config_list.append([test_flag, L])
-
-            bler_result = []
-            for snr_db in snr_db_list:
-                start = time.time()
-                tmp_count = 400
-                if snr_db < 0:
-                    total_count = tmp_count
-                else:
-                    total_count = tmp_count * 10
-                
-                failed_count = 0
-                for _ in range(total_count):
-                    blkandcrc, dn, LLRin = for_test_5g_ldpc_encoder(Zc, bgn, snr_db, crcpoly)
-                    if algo in ['BF', 'BP', 'min-sum']:
-                        blkandcrc_decoded, ck_decoded, status = nr_decode_ldpc(LLRin, Zc, bgn, L, algo,alpha=1, beta=0)
-                    elif algo == 'NMS':
-                        blkandcrc_decoded, ck_decoded, status = nr_decode_ldpc(LLRin, Zc, bgn, L, 'min-sum',alpha=alpha_list[test_idx], beta=0)
-                    else:
-                        blkandcrc_decoded, ck_decoded, status = nr_decode_ldpc(LLRin, Zc, bgn, L, 'min-sum',alpha=1, beta=beta_list[test_idx])
-                    
-                    #check result
-                    if not np.array_equal(blkandcrc, blkandcrc_decoded):
-                        failed_count += 1
-                
-                bler_result.append(failed_count/total_count)
-                print("finish test {}, snr_db={}, bler={:2.5f},elpased time: {:6.6f}".format(test_flag, snr_db,failed_count/total_count,time.time() - start))
-                            
-            test_results_list.append(bler_result)
-
-    #dump results to pickle file for post-processing
-    if sim_flag == 1:
-        sim_config = {'Zc':Zc, 'bgn':bgn }
-        with open(filename, 'wb') as handle:
-            pickle.dump([sim_config, test_config_list,test_results_list], handle, protocol=pickle.HIGHEST_PROTOCOL)
-    
-    with open(filename, 'rb') as handle:
-        [sim_config, test_config_list,test_results_list] = pickle.load(handle)
-    
-    draw_ldpc_decoder_result(snr_db_list, sim_config, test_config_list, test_results_list, figfile)
-
-    curpath = "tests/ldpc/testvectors"
-    for f in os.listdir(curpath):
-            if f.endswith(".mat") and f.startswith("ldpc_encode_testvec"):
-                print("LDPC decode testvector: " + f)
-                matfile = io.loadmat(curpath + '/' + f)
-                #read data from mat file
-                ck_ref = matfile['in'][0]
-                dn = matfile['dn'][0]
-                Zc = matfile['Zc'][0][0]
-                bgn = matfile['bgn'][0][0]
-                
-                start = time.time()
-                ck = decode_ldpc(dn, bgn)
-                print("decode_ldpc elpased time: {:6.2f}".format(time.time() - start))
-
-                assert np.array_equal(ck, ck_ref)
 
 
     pass

@@ -72,19 +72,51 @@ def ldpc_decoder_BF(LLRin, H, L):
     #reach max iterations, and S still not all zero
     return ck, False
 
+def for_test_ldpc_encoder(K, H, snr_db):
+    ck = np.random.randint(2, size=K)
+    #ldpc encoder to get parity bits
+    Hrowsize = H.shape[0]
+    Hcolsize = H.shape[1]
+    H1 = H[:,0:Hcolsize-Hrowsize]
+    H2 = H[:,Hcolsize-Hrowsize:Hcolsize]
+
+    L1 = -H1 @ ck.T  #matrix multiply
+    outd = np.linalg.solve(H2, L1) #outd = H2\L1;
+    wn = np.round(outd) % 2
+    wn = wn.astype('i1')
+
+    dn = np.concatenate((ck, wn))
+
+    en = 1 - 2*dn #BPSK modulation, 0 -> 1, 1 -> -1
+    fn = en + np.random.normal(0, 10**(-snr_db/20), dn.size) #add noise
+    
+    #LLR is log(P(0)/P(1)) = (-(x-1)^2+(x+1)^2)/(2*noise_power) = 4x/(2*noise_power) = 2x/noise_power
+    noise_power = 10**(-snr_db/10)
+    LLRin = 2*fn/noise_power
+
+    return dn, LLRin
+
 
 if __name__ == "__main__":
     from py5gphy.crc import crc
     from py5gphy.ldpc import nr_ldpc_encode
     from py5gphy.ldpc import ldpc_info
-    from py5gphy.ldpc import nr_ldpc_decode
     import time
+
+    print("test LDPC BF decoder")
+    from tests.ldpc import test_ldpc_decoder_BF
+    file_lists = test_ldpc_decoder_BF.get_testvectors()
+    count = 1
+    for filename in file_lists:
+        print("count= {}, filename= {}".format(count, filename))
+        count += 1
+        test_ldpc_decoder_BF.test_nr_ldpc_decode_BF(filename)
 
     H = np.array([[1,1,0,1,0,0],
                   [0,1,1,0,1,0],
                   [1,0,0,0,1,1],
                   [0,0,1,1,0,1]])
-    dn, LLRin = nr_ldpc_decode.for_test_ldpc_encoder(2, H, 255)
+    dn, LLRin = for_test_ldpc_encoder(2, H, 255)
 
     dn_decoded, status = ldpc_decoder_BF(LLRin, H, 8)
     assert status == True
@@ -92,7 +124,7 @@ if __name__ == "__main__":
 
     #test if one bit flip, and decoder can correctly decode it
     for m in range(H.shape[1]):
-        dn, LLRin = nr_ldpc_decode.for_test_ldpc_encoder(2, H, 255)
+        dn, LLRin = for_test_ldpc_encoder(2, H, 255)
         LLRin[m] = -LLRin[m]
         dn_decoded, status = ldpc_decoder_BF(LLRin, H, 8)
         assert status == True
@@ -101,7 +133,7 @@ if __name__ == "__main__":
     #test two bits flip, the decoder can not correctly decode it, but still return True
     failed_count = 0
     for m in range(H.shape[1]):
-        dn, LLRin = nr_ldpc_decode.for_test_ldpc_encoder(2, H, 255)
+        dn, LLRin = for_test_ldpc_encoder(2, H, 255)
         LLRin[m] = -LLRin[m]
         LLRin[(m+1) % LLRin.size] = -LLRin[(m+1) % LLRin.size]
         dn_decoded, status = ldpc_decoder_BF(LLRin, H, 8)
@@ -126,7 +158,7 @@ if __name__ == "__main__":
         false_count = 0 # ldpc decoder status = True, but bit sequence can not match
         start = time.time()
         for m in range(max_count):
-            dn, LLRin = nr_ldpc_decode.for_test_ldpc_encoder(K, H, snr_db)
+            dn, LLRin = for_test_ldpc_encoder(K, H, snr_db)
             dn_decoded, status = ldpc_decoder_BF(LLRin, H, L)
             if not np.array_equal(dn,dn_decoded):
                 failed_count += 1

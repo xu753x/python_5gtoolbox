@@ -1,23 +1,18 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import matplotlib.pyplot as plt
 import time
+import pickle
 
-from py5gphy.crc import crc
-from py5gphy.polar import nr_polar_encoder
-from py5gphy.polar import nr_polar_decoder_CA_PC_SCL
-from py5gphy.polar import nr_polar_decoder_CA_PC_SCL_optionB
-from py5gphy.polar import nr_polar_decoder_SC
-from py5gphy.polar import nr_polar_decoder_SC_optionB
+from scripts.internal import sim_polar_internal
 
-### this is single process polor decoder simulation
-# based on simulation
-# SC BLER over Eb/No relation is  70%/1.5dB, 30%/3dB
-# SCL L=8 BLER over Eb/No relation is 10%/2dB, 1%/3dB
-# SCL L=16 BLER over Eb/No relation is 10%/1.8dB, 1%/2.6dB
-# SCL L=32 BLER over Eb/No relation is 10%/1.6dB, 1%/2.4dB
+""" the script is used to simulate polar decoder performance
+it support ['SC', 'SC_optionB', 'SCL', 'SCL_optionB']
+'SC' and 'SC_optionB' have the same performance, just different way of implementation
+'SCL' and 'SCL_optionB' also have the same performance and different implementation
+the detailed polar decoder information is in docs/Detailed explanation of 5G NR Polar design and implementation of CA-SCL decoder
+"""
 
-""" below is the list of polar configuration in 5G
+""" below is the list of polar configuration supported in 5G
     [#K,     N,   nMax, iIL CRCLEN,padCRC, rnti,     
     [20,    64,    9,    1,  24,     0,    0,         ],
     [30,    64,    9,    1,  24,     0,    0,        ],
@@ -34,122 +29,76 @@ from py5gphy.polar import nr_polar_decoder_SC_optionB
     [400,   512,   10,   0,  11,     0,    0,         ],
     [600,   1024,  10,   0,  11,     0,    0,         ],
 
-    L usually choose 8,16,32
-    snr_db range is [0:4], BLER is less than 10^(-4) for sbr >= 4dB
-    """
+"""
 
-#config simulation parameters
+######################## test 1: test all four algo and three L values for one test case #################
+#5G polar config parameters
+#testcase is one of line from above table
+testcase_list = [
+    #K,     N,   nMax, iIL CRCLEN,padCRC, rnti
+    [64,    128,   10,   0,  11,     0,    0    ]
+]
 
-#test SC and SCL
-            #K,     N,   nMax, iIL CRCLEN,padCRC, rnti
-testcase = [64,    128,   10,   0,  11,     0,    0    ]
-K = testcase[0]
-N = testcase[1]; E=N
-nMax = testcase[2]
-iIL = testcase[3]
-CRCLEN = testcase[4]
-padCRC = testcase[5]
-rnti = testcase[6]   
+# polar decoder config
+algo_list = ['SC','SC_optionB','SCL','SCL_optionB']
+L_list = [8, 16, 32]
 
-snr_range = np.arange(0.5,3.5,0.5).tolist()
-test_decoders = ['SC','SC_optionB','SCL','SCL_optionB']
-L_range = [8,16,32]
+#simulation config
+snr_db_list = np.arange(0.5, 4, 0.5).tolist()
 
-#start polar decoder simulation
-start = time.time()
-test_results_list = [testcase]
+filename = "out/polar_decode_result_all.pickle" #test result save to this file
+figfile = "out/polar_decode_result_all.png"     #plt draw figure saveto this file
+sim_flag = 0  #if 1, start simulation, if 0, no simulation, read from filename and does test result analysis
+
 #main function, generate BLER for each decoder
-for decoder in test_decoders:
-    if decoder in ['SC','SC_optionB']:
-        tmp_L_range = [1]
-    else:
-        tmp_L_range = L_range
-    for L in tmp_L_range:
-        test_result = [[decoder, L]]
-        for snr_db in snr_range:
-            #set test counts
-            process_testcount = 100
-            if decoder in ['SC','SC_optionB']:
-                if snr_db <= 2:
-                    testcounts = 2 * process_testcount
-                else:
-                    testcounts = 6 * process_testcount
-            else: #['SCL','SCL_optionB']
-                if snr_db <= 2:
-                    testcounts = 2 * process_testcount
-                elif snr_db <= 3:
-                    testcounts = 20 * process_testcount
-                elif snr_db <= 3.5:
-                    testcounts = 200 * process_testcount
-                else:
-                    testcounts = 10**3 * process_testcount
+if sim_flag == 1:
+    sim_polar_internal.run_polar_simulation(testcase_list,algo_list,L_list,snr_db_list,filename)
 
-            failed_count = 0
-            for count in range(testcounts):
-                #run polar test with encoder and decoder
-                inbits = np.random.randint(2, size=K)
-                poly = {6:'6', 11: '11', 24: '24C'}[CRCLEN]
-                if padCRC == 0:
-                    blkandcrc = crc.nr_crc_encode(inbits, poly)
-                else:
-                    #add 24 '1' ahead before CRC24C
-                    inbits = np.concatenate((np.ones(24,'i1'), inbits))
-                    blkandcrc = crc.nr_crc_encode(inbits, poly,rnti)
-                    blkandcrc = blkandcrc[24:]
+with open(filename, 'rb') as handle:
+    [testcase_list,snr_db_list, test_results_list] = pickle.load(handle)
+sim_polar_internal.draw_polar_decoder_result(testcase_list, snr_db_list, test_results_list, figfile)
 
-                encodedbits =  nr_polar_encoder.encode_polar(blkandcrc, E, nMax, iIL)
-                
-                en = 1 - 2*encodedbits #BPSK modulation, 0 -> 1, 1 -> -1
-                fn = en + np.random.normal(0, 10**(-snr_db/20), en.size) #add noise
-                #LLR is log(P(0)/P(1)) = (-(x-1)^2+(x+1)^2)/(2*noise_power) = 4x/(2*noise_power) = 2x/noise_power
-                noise_power = 10**(-snr_db/10)
-                LLRin = fn/noise_power
+######################## test 2: test SCL only for all polar configuration and  #################
+#5G polar config parameters
+#testcase is one of line from above table
+            #K,     N,   nMax, iIL CRCLEN,padCRC, rnti
+testcase_list = [
+     #K,     N,   nMax, iIL CRCLEN,padCRC, rnti,     
+    [20,    64,    9,    1,  24,     0,    0,         ],
+    [30,    64,    9,    1,  24,     0,    0,        ],
+    [40,    128,   9,    1,  24,     0,    0,         ],
+    [40,    128,   9,    1,  24,     1,    1,         ],
+    [60,    128,   9,    1,  24,     1,    12345,    ],
+    [100,   256,   9,    1,  24,     1,    2345,     ],
+    [140,   512,   9,    1,  24,     1,    32345,    ],
+    [12,    64,    10,   0,  6,      0,    0,        ],  #n_wm_PC=0
+    [14,    256,    10,   0,  6,      0,    0,        ], #n_wm_PC=1
+    [19,    64,   10,   0,  6,      0,    0,       ],  #CRC6
+    [20,    128,   10,   0,  11,     0,    0,        ],
+    [100,   256,   10,   0,  11,     0,    0,         ],
+    [400,   512,   10,   0,  11,     0,    0,         ],
+    [600,   1024,  10,   0,  11,     0,    0,         ]
 
-                if decoder == 'SC':
-                    decbits, status = nr_polar_decoder_SC.nr_decode_polar_SC(LLRin, E, blkandcrc.size, nMax, iIL)
-                elif decoder == 'SC_optionB':
-                    decbits, status = nr_polar_decoder_SC_optionB.nr_decode_polar_SC_optionB(LLRin, E, blkandcrc.size, nMax, iIL)
-                elif decoder == 'SCL':
-                    decbits, status = nr_polar_decoder_CA_PC_SCL.nr_decode_polar_SCL(LLRin, E, blkandcrc.size, L, nMax, iIL, CRCLEN, padCRC, rnti )
-                elif decoder == 'SCL_optionB':
-                    decbits, status = nr_polar_decoder_CA_PC_SCL_optionB.nr_decode_polar_SCL_optionB(LLRin, E, blkandcrc.size, L, nMax, iIL, CRCLEN, padCRC, rnti )
-                else:
-                    assert 0
-                #check decoder result
-                #print('done  decoder={},L={},snr={},count={}'.format(decoder,L,snr_db,count))
-                if not np.array_equal(decbits, blkandcrc):
-                    failed_count += 1
-                    #print("decoder={},L={},snr={},count={},failed, failed number = {}".format(decoder,L,snr_db,count,failed_count))
-            
-            #save test result
-            bler = failed_count/testcounts
-            test_result.append([snr_db, bler])
-        
-        test_results_list.append(test_result)
+]
 
-print("polar decoder single processing elpased time: {:6.6f}".format(time.time() - start))
+# polar decoder config
+algo_list = ['SCL']
+L_list = [16,32]
 
-#draw the plot
-marker_list = [".","o","v","<",">","P","*","+","x","D","d"]
-marker_count = 0
-plt.xlabel("Eb/N0")
-plt.ylabel("BLER")
-plt.title("polar decoder, N={}, K={}".format(N,K))
-plt.yscale("log")
-plt.xlim(snr_range[0]-0.5,snr_range[-1]+1)
-plt.ylim(10**(-5),1)
-plt.grid(True)
+#simulation config
+snr_db_list = np.arange(0.5, 3.5, 0.5).tolist()
 
-for test in test_results_list[1:]:
-    set_label = test[0][0] + ', L=' + str(test[0][1])
-    xd = [x1 for x1,y1 in test[1:]]
-    yd = [y1 for x1,y1 in test[1:]]
-    plt.plot(xd, yd, marker=marker_list[marker_count], label=set_label)
-    marker_count =(marker_count+1) % len(marker_list)
+filename = "out/polar_decode_result_all_testcases.pickle" #test result save to this file
+figfile = "out/polar_decode_result_all_testcases.png"     #plt draw figure saveto this file
+sim_flag = 0  #if 1, start simulation, if 0, no simulation, read from filename and does test result analysis
 
-plt.legend(loc="upper right",fontsize=5)
-plt.savefig("polar_decoder.png")
-plt.show()
+#main function, generate BLER for each decoder
+if sim_flag == 1:
+    sim_polar_internal.run_polar_simulation(testcase_list,algo_list,L_list,snr_db_list,filename)
 
+with open(filename, 'rb') as handle:
+    [testcase_list,snr_db_list, test_results_list] = pickle.load(handle)
+sim_polar_internal.draw_polar_decoder_result(testcase_list, snr_db_list, test_results_list, figfile)
+sim_polar_internal.to_excel_polar_decoder_result(testcase_list, snr_db_list, test_results_list, figfile)
 
 pass
