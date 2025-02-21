@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 import numpy as np
 import matplotlib.pyplot as plt
-import xlwt
 
 import time
 import pickle
@@ -102,4 +101,39 @@ def draw_polar_decoder_result(testcase_list, snr_db_list, test_results_list, fig
     plt.close(fig)
     plt.pause(0.01)
 
-def to_excel_polar_decoder_result(testcase_list, snr_db_list, test_results_list, excelfile):
+def draw_polar_decoder_result_2(testcase_list, snr_db_list, test_results_list, figfile):
+    #draw the plot
+    fig = plt.figure()
+    marker_list = [".","o","v","<",">","P","*","+","x","D","d"]
+    marker_count = 0
+    plt.xlabel("Eb/N0")
+    plt.ylabel("BLER")
+    
+    if len(testcase_list) == 1:
+        K = testcase_list[0][0]
+        N = testcase_list[0][1]
+        plt.title("polar decoder, N={}, K={}".format(N,K))
+    else:
+        plt.title("polar decoder")
+    plt.yscale("log")
+    plt.xlim(snr_db_list[0],snr_db_list[-1])
+    plt.ylim(10**(-4),1)
+    plt.grid(True)
+
+    for idx, test in enumerate(test_results_list):
+        if idx not in np.array([1,2,5,6,8,13])*2:
+            continue
+        
+        if len(testcase_list) == 1:
+            set_label = "{},L={}".format(test[0][0],test[0][1])
+        else:
+            set_label = "{},L={},K={},N={}".format(test[0][0],test[0][1],test[0][2][0],test[0][2][1])
+        xd = [x1 for x1,y1 in test[1:]]
+        yd = [y1 for x1,y1 in test[1:]]
+        plt.plot(xd, yd, marker=marker_list[marker_count], label=set_label)
+        marker_count =(marker_count+1) % len(marker_list)
+	
+    plt.legend(loc="upper right",fontsize=5)
+    plt.savefig(figfile)
+    plt.close(fig)
+    plt.pause(0.01)

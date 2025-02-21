@@ -8,7 +8,7 @@ from py5gphy.polar import polar_construct
 from py5gphy.polar import polar_path_list
 from py5gphy.crc import crc
 
-def nr_decode_polar_SCL(LLRin, E, K, L, nMax, iIL, CRCLEN=24, padCRC=0, rnti=0 ):
+def nr_decode_polar_SCL(LLRin, E, K, L, nMax, iIL, CRCLEN=24, padCRC=0, rnti=0):
     """ polar CRC aided and PC checked SCL decoder
         the idea refer to "List Decoding of Polar Codes" IV. SUCCESSIVE CANCELLATION LIST DECODER
         But the design is totally different

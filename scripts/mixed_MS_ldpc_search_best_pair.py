@@ -9,7 +9,8 @@ from scripts.internal import sim_ldpc_internal
 """
 
 #5G LDPC config, Zc and bgn
-Zc_list = [2, 12 ,28, 40, 72, 176, 208,384]  # Z value in 38.211 Table 5.3.2-1: Sets of LDPC lifting size Z
+#Zc_list = [12 ,28, 40, 72, 176, 208,384]  # Z value in 38.211 Table 5.3.2-1: Sets of LDPC lifting size Z
+Zc_list = [12 ,28]
 bgn_list =[1, 2]  #bgn in [1,2]
 crcpoly = '24A'  #default value, no need change in the simulation
 
@@ -18,12 +19,12 @@ algo_list = [ 'mixed-MS']
 
 #this mixed [alpha,beta]pair candidate should come from NMS and OMS search result, 
 # choose best 3 alpha value and 3 best beta values to generate [alpha,beta] candidate
-search_mixed_list = [[0.8,0.3]] #provide [alpha,beta] pair
+search_mixed_list = [[0.7,0.5],[0.7,0.3],[0.5,0.5],[0.8,0.3]] #provide [alpha,beta] pair
 
 L_list = [32] #ldpc decoder iteration number
 
 #simulation config
-snr_db_list = [-0.5, 0]
+snr_db_list = [-1, -0.5]
 
 filename_pre = "out/mixed_MS_search_pair_" #test result save to this file
 figfile_pre = "out/mixed_MS_search_pair_"     #plt draw figure saveto this file
@@ -44,3 +45,5 @@ for Zc in Zc_list:
             [sim_config, test_config_list,test_results_list] = pickle.load(handle)
 
         sim_ldpc_internal.draw_ldpc_decoder_result(snr_db_list, sim_config, test_config_list, test_results_list, figfile)
+
+pass

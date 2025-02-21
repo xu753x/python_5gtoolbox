@@ -98,7 +98,6 @@ if sim_flag == 1:
 
 with open(filename, 'rb') as handle:
     [testcase_list,snr_db_list, test_results_list] = pickle.load(handle)
-sim_polar_internal.draw_polar_decoder_result(testcase_list, snr_db_list, test_results_list, figfile)
-sim_polar_internal.to_excel_polar_decoder_result(testcase_list, snr_db_list, test_results_list, figfile)
+sim_polar_internal.draw_polar_decoder_result_2(testcase_list, snr_db_list, test_results_list, figfile)
 
 pass

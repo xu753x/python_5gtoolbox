@@ -64,13 +64,14 @@ def run_ldpc_simulation(Zc, bgn, crcpoly, algo_list,alpha_list,beta_list,mixed_l
                         
                         #terminate check
                         #if (test_count >= max_count) or (failed_count >= failed_limit):
-                        test_limit_list = [200,400,800,2000] 
+                        test_limit_list = np.array([200,400,800,2000])*5
+                        failed_limit = np.array([10,5,2])*5
                         if test_count in test_limit_list:
-                            if (test_count == test_limit_list[0]) and (failed_count >= 10):
+                            if (test_count == test_limit_list[0]) and (failed_count >= failed_limit[0]):
                                 break
-                            if (test_count == test_limit_list[1]) and (failed_count >= 5):
+                            if (test_count == test_limit_list[1]) and (failed_count >= failed_limit[1]):
                                 break
-                            if (test_count == test_limit_list[2]) and (failed_count >= 2):
+                            if (test_count == test_limit_list[2]) and (failed_count >= failed_limit[2]):
                                 break
                             if (test_count == test_limit_list[3]):
                                 break
@@ -78,7 +79,8 @@ def run_ldpc_simulation(Zc, bgn, crcpoly, algo_list,alpha_list,beta_list,mixed_l
                     #save test result
                     bler = failed_count/test_count
                     bler_result.append(bler) #add bler value
-                    print("finish test {}, Zc {}, bgn{},snr_db={}, bler={:2.5f},elpased time: {:6.2f}".format(test_flag, Zc, bgn,snr_db,bler,time.time() - start))
+                    print("finish test {}, Zc {}, bgn{},snr_db={}, test_count={},failed_count={},bler={:2.5f},elpased time: {:6.2f}".\
+                          format(test_flag, Zc, bgn,snr_db,test_count, failed_count,bler,time.time() - start))
                             
                 test_results_list.append(bler_result) #test_results_list save bler list for each algo
     
