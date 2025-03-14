@@ -1,31 +1,48 @@
 # -*- coding: utf-8 -*-
-import numpy as np
 import pytest
-from scipy import io
 import os
+from zipfile import ZipFile 
+from scipy import io
+import numpy as np
 
 from py5gphy.polar import nr_polar_raterecover
 
-def test_nr_polar_raterecover():
-    curpath = "tests/polar/testvectors"
-    for f in os.listdir(curpath):
+def get_testvectors():
+    path = "tests/polar/testvectors"
+    if len(os.listdir(path)) < 3: #desn't unzip testvectors
+        zipfile_lists = []
+        for f in os.listdir(path):
+            if f.endswith(".zip"):
+                zipfile_lists.append(path + '/' + f)
+
+        for zipfile in zipfile_lists:
+            zObject = ZipFile(zipfile, 'r')
+            zObject.extractall(path)
+
+    file_lists = []
+    for f in os.listdir(path):
         if f.endswith(".mat") and f.startswith("polarRM_recover_testvec"):
-            matfile = io.loadmat(curpath + '/' + f)
-            #read data from mat file
-            inbits = matfile['in'][0]
-            outd = matfile['outd'][0]
-            E = matfile['E'][0][0]
-            K = matfile['K'][0][0]
-            N = matfile['N'][0][0]
-            iBIL = matfile['iBIL'][0][0]
+            file_lists.append(path + '/' + f)
+                        
+    return file_lists
 
-            outbits = nr_polar_raterecover.ratemrecover_polar(inbits, K, N, iBIL)
+@pytest.mark.parametrize('filename', get_testvectors())
+def test_nr_polar_raterecover(filename):
+    matfile = io.loadmat(filename)
+    #read data from mat file
+    inbits = matfile['in'][0]
+    outd = matfile['outd'][0]
+    E = matfile['E'][0][0]
+    K = matfile['K'][0][0]
+    N = matfile['N'][0][0]
+    iBIL = matfile['iBIL'][0][0]
 
-            assert np.array_equal(outd, outbits)
+    LLRin = 1 - 2*inbits.astype('i1')
 
-    pass
+    LLR_limit = 20
 
-if __name__ == "__main__":
-    test_nr_polar_raterecover()
+    LLRout = nr_polar_raterecover.ratemrecover_polar(LLRin, K, N, iBIL,LLR_limit)
+    LLRout[LLRout==LLR_limit] = 1
+    outbits = (1-LLRout)/2
 
-    pass
+    assert np.array_equal(outd, outbits.astype('u1'))
