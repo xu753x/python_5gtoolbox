@@ -3,7 +3,7 @@
 import numpy as np
 
 from py5gphy.nr_ssb import nr_ssb
-from py5gphy.nr_lowphy import dl_lowphy_process
+from py5gphy.nr_lowphy import tx_lowphy_process
 from py5gphy.common import nr_slot
 from py5gphy.nr_pdsch import nr_pdsch
 from py5gphy.nr_pdcch import nr_pdcch
@@ -128,7 +128,7 @@ def gen_dl_waveform(waveform_config, carrier_config, ssb_config,
         fd_waveform[:, idx*fd_slotsize:(idx+1)*fd_slotsize] = fd_slot_data
 
         ## start DL low phy processing for the slot
-        td_slot = dl_lowphy_process.DL_low_phy(fd_slot_data, carrier_config, sample_rate_in_hz)
+        td_slot = tx_lowphy_process.Tx_low_phy(fd_slot_data, carrier_config, sample_rate_in_hz)
         
         # slot level phase compensation
         if central_freq_in_hz:
@@ -145,7 +145,7 @@ def gen_dl_waveform(waveform_config, carrier_config, ssb_config,
 
     ## start DUC processing,channel filter and oversample, output sample rate is fixed to 245.76MHz
     #oversample_rate must be 1,2,4,8,..
-    dl_waveform = dl_lowphy_process.channel_filter(td_waveform, carrier_config, sample_rate_in_hz)
+    dl_waveform = tx_lowphy_process.channel_filter(td_waveform, carrier_config, sample_rate_in_hz)
     
     return fd_waveform, td_waveform, dl_waveform
 

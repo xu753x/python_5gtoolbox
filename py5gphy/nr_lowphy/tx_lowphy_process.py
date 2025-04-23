@@ -7,8 +7,9 @@ from scipy.signal import remez
 
 from py5gphy.common import nr_slot
 
-def DL_low_phy(fd_slot, carrier_config, sample_rate_in_hz):
-    """ handle DL data IFFT, add CP and phase compensation
+def Tx_low_phy(fd_slot, carrier_config, sample_rate_in_hz):
+    """ handle Tx data IFFT, add CP and phase compensation
+    could be used for gNodeB DL and UE UL transmission
     td_slot = DL_low_phy(fd_slot)
     input:
         sample_rate_in_hz: time domain sample rate after ifft and add cp

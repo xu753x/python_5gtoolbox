@@ -112,6 +112,21 @@ class Pdsch():
             pdsch_precoded, fd_slot_data, RE_usage_inslot, self.pdsch_config)
 
         return fd_slot_data, RE_usage_inslot
+    
+    def RX_process(self,fd_slot_data, RE_usage_inslot, slot):
+        """ PDSCH receiving process
+        """
+        #pdsch timing ofsfet estimation
+        
+        #timing offset compensation
+
+        #pdsch channel estimation
+
+        #PDSCh channel equalization
+
+        #DSCH receiving processing
+        
+
 
 def codebook_gen_pm(codebook):
     """ generate precoding matrix from codebook"""

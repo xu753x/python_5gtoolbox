@@ -24,6 +24,19 @@ class NrCSIRS():
 
         nr_csirs_info.validate_config(csirs_config, carrier_prbsize)
 
+    def is_valid_slot(self,sfn,slot):
+        carrier_scs = self.carrier_config['scs']
+        #read input
+        periodicity = self.csirs_config["periodicity"]
+        slotoffset = self.csirs_config["slotoffset"]
+
+        #check if this is CSIRS slot by 38.211 7.4.1.5.3 Mapping to physical resources
+        Nslot_in_frame = 10*carrier_scs/15        
+        if (Nslot_in_frame*sfn + slot - slotoffset) % periodicity:
+            #not CSIRS slot
+            return True
+        return False
+        
     def process(self, fd_slot_data, RE_usage_inslot, sfn,slot):
         """generate one slot frquency domain data that includes CSI-RS data
         output:
@@ -65,6 +78,12 @@ class NrCSIRS():
             
         return fd_slot_data, RE_usage_inslot
 
+    def channel_estimation(self, fd_slot, sfn, slot):
+        """do channel estimation
+        """
+        pass
+
+    def RI_PMI_CQI
 
 if __name__ == "__main__":
     print("test nr CSIRS class and waveform generation")
