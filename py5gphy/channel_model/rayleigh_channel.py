@@ -19,12 +19,8 @@ def gen_RayleighChannel_filters(num_of_sample,fmax=0,samplerate_in_hz=245760000,
         samplerate_in_hz: Input signal sample rate (Hz)
         num_of_sinusoids: Number of sinusoids used to generate Rayleigh filter
     output:
-        filter sequence with num_of_sample + additonal_samples (add additonal_samples to be used for interpolation)
+        filter sequence with num_of_sample 
     """
-    additonal_samples = 0 #generate addiitonal samples which are used for interpolation 
-    total_samples = num_of_sample + additonal_samples
-    N = num_of_sinusoids
-    fD = fmax
     Ts = 1/samplerate_in_hz
 
     #model I
@@ -33,24 +29,24 @@ def gen_RayleighChannel_filters(num_of_sample,fmax=0,samplerate_in_hz=245760000,
     #where alpha[n] = (2*pi*n-pi+seta)/4N , seta is uniformly distributed over [-pi,pi]
     #phase1[n],phase2[n] are uniformly distributed over [-pi,pi]
     rng = np.random.default_rng()
-    phase1 = rng.uniform(-np.pi, np.pi, (N,1))
-    phase2 = rng.uniform(-np.pi, np.pi, (N,1))
-    seta = rng.uniform(-np.pi, np.pi, (N,1))
+    phase1 = rng.uniform(-np.pi, np.pi, (num_of_sinusoids,1))
+    phase2 = rng.uniform(-np.pi, np.pi, (num_of_sinusoids,1))
+    seta = rng.uniform(-np.pi, np.pi, (num_of_sinusoids,1))
 
-    #repeate to get N X total_samples matrix
-    phase1_m = np.repeat(phase1, total_samples, axis=1)
-    phase2_m = np.repeat(phase2, total_samples, axis=1)
-    seta_m = np.repeat(seta, total_samples, axis=1)
+    #repeate to get num_of_sinusoids X num_of_sample matrix
+    phase1_m = np.repeat(phase1, num_of_sample, axis=1)
+    phase2_m = np.repeat(phase2, num_of_sample, axis=1)
+    seta_m = np.repeat(seta, num_of_sample, axis=1)
 
-    #generate N X total_samples matrix with each line data from 0 to total_samples-1
-    samples = np.ones((N,1)) @ np.arange(total_samples).reshape((1,total_samples))
+    #generate num_of_sinusoids X num_of_sample matrix with each line data from 0 to num_of_sample-1
+    samples = np.ones((num_of_sinusoids,1)) @ np.arange(num_of_sample).reshape((1,num_of_sample))
     
-    ci = np.sqrt(2/N)*np.sum(np.cos(2*np.pi*fD*Ts*samples*np.cos(seta_m) + phase1_m), axis=0)
-    cq = np.sqrt(2/N)*np.sum(np.cos(2*np.pi*fD*Ts*samples*np.sin(seta_m) + phase2_m), axis=0)
+    ci = np.sqrt(2/num_of_sinusoids)*np.sum(np.cos(2*np.pi*fmax*Ts*samples*np.cos(seta_m) + phase1_m), axis=0)
+    cq = np.sqrt(2/num_of_sinusoids)*np.sum(np.cos(2*np.pi*fmax*Ts*samples*np.sin(seta_m) + phase2_m), axis=0)
 
     return ci + 1j*cq    
 
 if __name__ == "__main__":
     cm = gen_RayleighChannel_filters(10)
-
+    assert np.all(cm ==cm[0])
     pass

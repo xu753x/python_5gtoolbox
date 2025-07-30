@@ -1,13 +1,6 @@
 # 前言
-无线系统发送和接收时间不可避免存在定时偏差，频率不一致，以及运动场景下多普勒频移。
+无线系统发送和接收之间存在定时偏差，载波频偏，以及运动场景下多普勒频移。
 
-本文内容包括：
-1. 定时偏差接收机的数学模型，时偏估计和补偿
-2. 接收机频率偏差数学模型，SINR分析
-3. 频率偏差估计和补偿
-4. 如何区分频偏是多普勒频移导致还是接收机频率偏差导致
-
-# 载波频偏和多普勒频偏下接收信号数学模型
 载波频偏指的是发送机和接收机之间的本振频率偏差，与多普勒频偏不同。多普勒频偏是通过发送机和接收机间相对运动产生，载波频偏是由于发送机和接收机间晶体振荡题频率偏差导致。
 
 晶体振荡器频偏带来几个影响。
@@ -16,63 +9,79 @@
 2. 采样时钟偏差，比如期望采样时钟32.76Mhz，实际得到$32.76MHz*(1+\rho)$,$\rho$是相对频偏
 3. 定时偏差，比如一秒钟定时偏差为$\rho$，1ms定时偏差为$\rho10^{-3}$
 
-多普勒频偏：$\frac{vf_c}{C}$,其中 $v$为发送和接收机互相靠近的相对速度。
+多普勒频偏：$\frac{vf_c}{C}$,其中 $v$为发送和接收机互相靠近的相对速度。如果接收机远离发送机运动，多普勒频率为负数。反之为正。
 
-如果接收机远离发送机运动，多普勒频率为负数。反之为正。
+本文分析这些因素对系统的影响，以及估计和补偿方法，内容包括：
+1. 定时频偏，载波频偏和多普勒频偏下接收信号数学模型，频偏导致的SINR分析
+2. 定时偏差估计和补偿
+3. 载波频偏以及多普勒频偏估计和补偿
 
-## 数学模型
-DFT公式为：$x(n)=\frac{1}{N}\displaystyle\sum\limits_{k=0}^{N-1} X[k]e^{j2\pi kn/N}$
+# 载波频偏和多普勒频偏下接收信号数学模型
 
-只考虑一个子载波$k$,其他$X(k)=0$, 则OFDM符号的时域离散接收信号为：
+IDFT公式为：$x(n)=\frac{1}{N}\displaystyle\sum\limits_{k=0}^{N-1} X[k]e^{j2\pi kn/N}$
+
+只考虑一个子载波$X_k$,其他$X(k)=0$, 则OFDM符号的时域离散接收信号为：
 $$
 \begin{align}
-x(n)&=\frac{1}{N}d_ke^{j2\pi(k+\frac{f_i}{f_c}\rho+\frac{f_d}{f_c})(n(1+\rho)+L_m\rho-\delta)/N} \nonumber \\
-&=\frac{1}{N}d_ke^{j2\pi(k+M\rho+\varepsilon)(n(1+\rho)+L_m\rho-\delta)/N}
+x(n)&=\frac{1}{N}h_kX_ke^{j2\pi(k+\frac{f_i}{f_c}\rho+\frac{f_d}{f_c})(n(1+\rho)+L_m\rho-\delta)/N} \nonumber \\
+&=\frac{1}{N}h_kX_ke^{j2\pi(k+M\rho+\varepsilon)(n(1+\rho)+L_m\rho-\delta)/N}
 \end{align}
 $$ 
 
-其中：
-* $\frac{f_i}{f_c}\rho=M\rho$为相对于子载波频率的载波频偏, $M$为载波频率和子载波带宽比值
-* $\frac{f_d}{f_c}$为相对于子载波频率的多普勒频偏
-* $(1+\rho)$为相对采样时钟
-* $L_m\rho$为晶体振荡器相对频偏导致的符号$m$的采样定时偏差
-* $\delta$为发送机和接收机间符号定时偏差
-* 晶体振荡器相对频偏$\rho$
+这个公式是以接收机为基准：
+* $h_k$为子载波$k$的信道响应，$X_k$为子载波$k$发送信号
+* 发送机晶体振荡器相对频偏$\rho$
 * 载波频率$f_i$
 * 子载波带宽$f_c$
 * 采样时钟带宽$T_C$
 * 多普勒频移$f_d$
+* $\frac{f_i}{f_c}\rho=M\rho$为发送机相对于子载波频率的载波频偏, $M$为载波频率和子载波带宽比值
+* $\frac{f_d}{f_c}$为相对于子载波频率的多普勒频偏
+* $(1+\rho)$为发送机相对采样时钟
+* $L_m\rho$为发送机晶体振荡器相对频偏导致的符号$m$的采样定时偏差
+* $\delta$为发送机相对接收机的符号定时偏差，$\delta$为正代表发送机滞后发送，为负表示发送机超前发送
 
-假设一个5G载波频率3GHz，带宽100MHz，子载波带宽30KHz，采样时钟带宽$T_C=1/122.88MHz$,晶体振荡器相对频偏$\rho=0.1ppm$，移动速度$v=216km/hour=60m/s$，$\delta=2.5$
 
-symbol 0 长度为352CP+4096 sample, symbol 1 长度为288CP+4096sample, symbol2 CP = 288,$m=2$符号距离slot起始位置有$L_m=(352+4096+288+4096+200)\rho=9120\rho$
+例子：假设一个5G carrier，载波频率$f_i=3GHz$，带宽100MHz，子载波带宽$f_c=30KHz$，时域采样频率为$$122.88MHz$,则采样时钟带宽$T_C=1/122.88MHz$,晶体振荡器相对频偏$\rho=0.1ppm$，移动速度$v=216km/hour=60m/s$，发送机和接收机间符号定时偏差$\delta=2.5$
+
+1ms内14个符号，每个符号sample长度为4096，符号0 CP长度为352，其他符号CP长度为288.
+
+symbol 0 长度为352CP+4096 sample, symbol 1 长度为288CP+4096sample, symbol2 CP = 288,$m=2$符号距离slot起始位置有$L_m=(352+4096+288+4096+200)\rho=9120\rho$。假设符号2和9为DMRS符号，用于时偏和频偏估计
 
 根据上面公式可以得到：
-1. 多普勒频移$f_d=\frac{vf_c}{C}=600Hz$
-2. $\frac{f_i}{f_c}\rho=0.01$
-3. $\frac{f_d}{f_c}=0.02$
-3. 符号2 $L_2\rho=9120*10^{-7}$
-4. FFT size $N=1/(f_csT_c)=4096$
+* 多普勒频移$f_d=\frac{vf_c}{C}=600Hz$，相对多普勒频偏$\varepsilon=600/30K=0.02$
+* $M=\frac{f_i}{f_c}=10^5$
+* 相对载波频偏 $M\rho=0.01$
+* 符号2时偏：$L_m\rho-\delta=(4096*2+352+288*2)\rho-2.5=9120*10^{-7}-2.5$
+* 符号9时偏：$L_m\rho-\delta=(4096*9+352+288*9)\rho-2.5=39808*10^{-7}-2.5$
+* FFT size $N=1/(f_cT_c)=4096$
 
 
 对$x(n)$做DFT，得到：
 $$
 \begin{align}
-X_m(K)&=\displaystyle\sum\limits_{n=0}^{N-1}\frac{1}{N}d_ke^{j2\pi(k+M\rho+\varepsilon)(n(1+\rho)+L_m\rho-\delta)/N}e^{-2\pi nk/N} \nonumber \\
-&\approx \frac{1}{N}d_ke^{j2\pi[k(L_m\rho-\delta)+(M\rho+\varepsilon)(L_m\rho-\delta)]/N}\displaystyle\sum\limits_{n=0}^{N-1}e^{j2\pi(k\rho+M\rho+\varepsilon)n/N} \nonumber \\
-&= \frac{1}{N}d_ke^{j2\pi[k(L_m\rho-\delta)+(M\rho+\varepsilon)(L_m\rho-\delta)]/N}e^{j\pi(N-1)(k\rho+M\rho+\varepsilon)/N} \frac{sin(\pi(k\rho+M\rho+\varepsilon))}{sin(\pi(k\rho+M\rho+\varepsilon)/N)} \nonumber \\
-&\approx \frac{1}{N}d_ke^{j\pi [k(2((L_m\rho-\delta))+\rho)+(M\rho+\varepsilon)(2(L_m\rho-\delta)+1))]/N}\frac{sin(\pi(k\rho+M\rho+\varepsilon))}{sin(\pi(k\rho+M\rho+\varepsilon)/N)}
+X_m(K)&=\displaystyle\sum\limits_{n=0}^{N-1}\frac{1}{N}h_kX_ke^{j2\pi(k+M\rho+\varepsilon)(n(1+\rho)+L_m\rho-\delta)/N}e^{-2\pi nk/N} \nonumber \\
+&\approx \frac{1}{N}h_kX_ke^{j2\pi[k(L_m\rho-\delta)+(M\rho+\varepsilon)(L_m\rho-\delta)]/N}\displaystyle\sum\limits_{n=0}^{N-1}e^{j2\pi(k\rho+M\rho+\varepsilon)n/N} \nonumber \\
+&= \frac{1}{N}h_kX_ke^{j2\pi[k(L_m\rho-\delta)+(M\rho+\varepsilon)(L_m\rho-\delta)]/N}e^{j\pi(N-1)(k\rho+M\rho+\varepsilon)/N} \frac{sin(\pi(k\rho+M\rho+\varepsilon))}{sin(\pi(k\rho+M\rho+\varepsilon)/N)} \nonumber \\
+&\approx \frac{1}{N}h_kX_ke^{j\pi [k(2(L_m\rho-\delta)+\rho)+(M\rho+\varepsilon)(2(L_m\rho-\delta)+1))]/N}\frac{sin(\pi(k\rho+M\rho+\varepsilon))}{sin(\pi(k\rho+M\rho+\varepsilon)/N)}
 \end{align}
 $$ 
 
+其中：
+* $L_m\rho-\delta$为符号$m$的时偏，
+* $j\pi [k(2(L_m\rho-\delta)+\rho)+(M\rho+\varepsilon)(2(L_m\rho-\delta)+1))]=j\pi [k(2(L_m\rho-\delta)+\rho)+(M\rho+\varepsilon)(2(L_m\rho-\delta)+1)+\varphi_m]$为符号$m$子载波$k$相位，其中$\varphi_m=(M\rho+\varepsilon)(2(L_m\rho-\delta)+1))$
+
+可以看出，
+* 在一个符号内部，$\varphi_m$值不变，每个子载波相位$j\pi [k(2(L_m\rho-\delta)+\rho)]$变化跟$k$有关，有这个特性可以估计每个DMRS符号的时偏$2(L_m\rho-\delta)+\rho)$值。如果有两个DMRS符号，可以估计晶体振荡器相对频偏$\rho$值
+
 ## SINR 分析
-假设发送的子载波$k$信号功率为$|d_k|^2=1$，如果不考虑路损，接收信号总功率也是$1$
+假设发送的子载波$k$信号功率为$|X_k|^2=1$，如果不考虑路损$|h_k|^2=1$,，接收信号总功率也是$1$
 
 接收信号子载波$k$功率为：
 $$
 \begin{align}
-|X_m(K)|^2 &=\frac{1}{N^2}|d_k|^2(\frac{sin(\pi(k\rho+M\rho+\varepsilon))}{sin(\pi(k\rho+M\rho+\varepsilon)/N)})^2  \nonumber \\
-& \approx \frac{1}{N^2}(\frac{sin(\pi(M\rho+\varepsilon))}{sin(\pi(M\rho+\varepsilon)/N)})^2 \nonumber \\
+|X_m(K)|^2 &=\frac{1}{N^2}|X_k|^2(\frac{sin(\pi(k\rho+M\rho+\varepsilon))}{sin(\pi(k\rho+M\rho+\varepsilon)/N)})^2  \nonumber \\
+& \approx \frac{1}{N^2}(\frac{sin(\pi(M\rho+\varepsilon))}{sin(\pi(M\rho+\varepsilon)/N)})^2 \: \:for \:M>> k\nonumber \\
 & \approx 1-\frac{1}{3}(\pi(M\rho+\varepsilon))^2
 \end{align}
 $$
@@ -90,6 +99,58 @@ $$
 
 子载波$k$对其他载波的干扰为：$1-|X_m(K)|^2=\frac{1}{3}(\pi(M\rho+\varepsilon))^2$
 
+这是一个子载波对其他载波的干扰，如果发送$N$个子载波，那么总的干扰为$N(\frac{1}{3}(\pi(M\rho+\varepsilon))^2)$,平均每个子载波收到的其他载波干扰为$\frac{1}{3}(\pi(M\rho+\varepsilon))^2$.
+
+频偏导致的SNR为：$SNR = \frac {1-\frac{1}{3}(\pi(M\rho+\varepsilon))^2}{\frac{1}{3}(\pi(M\rho+\varepsilon))^2}=3(\pi(M\rho+\varepsilon))^{-2}$
+
+SNR dB值： $SNR_dB \approx -5.17-20log10(M\rho+\varepsilon)$
+
+## OFDM系统如何仿真载波频偏和多普勒频偏下的信道模型
+前面假设一个子载波$X_k$,其他$X(k)=0$, 则OFDM符号的时域离散接收信号为：
+$$
+\begin{align}
+x(n)&=\displaystyle\sum\limits_{k=0}^{N-1}\frac{1}{N}h_kX_ke^{j2\pi(k+\frac{f_i}{f_c}\rho+\frac{f_d}{f_c})(n(1+\rho)+L_m\rho-\delta)/N} \nonumber \\
+&=\displaystyle\sum\limits_{k=0}^{N-1}\frac{1}{N}h_kX_ke^{j2\pi(k+M\rho+\varepsilon)(n(1+\rho)+L_m\rho-\delta)/N}  \nonumber \\
+&=e^{j2\pi (M\rho+\varepsilon)(L_m\rho-\delta)/N}e^{j2\pi (M\rho+\varepsilon)n(1+\rho)/N}\displaystyle\sum\limits_{k=0}^{N-1}\frac{1}{N}h_kX_ke^{j2\pi k(n(1+\rho)+L_m\rho-\delta)/N}  \nonumber \\
+& \approx e^{j2\pi (M\rho+\varepsilon)(L_m\rho-\delta)/N}e^{j2\pi (M\rho+\varepsilon)n/N}\displaystyle\sum\limits_{k=0}^{N-1}\frac{1}{N}h_kX_ke^{j2\pi k(n(1+\rho)+L_m\rho-\delta)/N} 
+\end{align}
+$$ 
+上面公式第一项为OFDM时域信号symbol的固定相位偏差，注意这个相位与$L_m$有关，说明每个符号的固定相位偏差不同。
+
+第二项$e^{j2\pi (M\rho+\varepsilon)n/N}$为频偏导致的时域每个采样点相位变化
+
+第三项$\displaystyle\sum\limits_{k=0}^{N-1}\frac{1}{N}h_kX_ke^{j2\pi k(n(1+\rho)+L_m\rho-\delta)/N}=\displaystyle\sum\limits_{k=0}^{N-1}\frac{1}{N}h_kX_ke^{j2\pi k(n\rho+L_m\rho-\delta)/N}e^{j2\pi kn/N}$，也就是发送的频域信号做IDFT前，每个子载波数据做$2\pi k(n\rho+L_m\rho-\delta)/N$相位调整
+
+# 时偏估计以及晶体振荡器相对频偏$\rho$估计
+接收DMRS符号首先做LS估计，也就是与DMRS符号的共轭相乘，得到的结果为：
+$$
+\begin{align}
+H_m(k)&=\frac{1}{N}h_ke^{j\pi [k(2(L_m\rho-\delta)+\rho)+(M\rho+\varepsilon)(2(L_m\rho-\delta)+1))]/N}\frac{sin(\pi(k\rho+M\rho+\varepsilon))}{sin(\pi(k\rho+M\rho+\varepsilon)/N)} \nonumber \\
+&\approx \frac{1}{N}h_ke^{j2\pi [k(L_m\rho-\delta)+(M\rho+\varepsilon)(2(L_m\rho-\delta)+1))]/N}\frac{sin(\pi(k\rho+M\rho+\varepsilon))}{sin(\pi(k\rho+M\rho+\varepsilon)/N)}
+\end{align}
+$$
+其中假设$L_m\rho-\delta >> \rho$
+
+时偏估计算法分为时域估计和频域估计两种。其中时域估计是通过对时域接收信号滑动相关实现，估计的最小颗粒度为一个采样时钟宽度，无法估计小于采样时钟精度。频域估计可以估计的更精细。下面只介绍频域估计算法。
+
+每个DMRS 符号LS估计结果做下面频域时偏估计：
+$$
+\hat{t_m}=L_m\rho-\delta=\frac{N}{2\pi}arg({\displaystyle\sum\limits_{k=1}^{N-1}H_m[k]H_m^*[k-1]})
+$$
+
+晶体振荡器相对频偏$\rho$估计
+$$
+\hat{\rho}=\frac{\hat{t_{m2}}-\hat{t_{m1}}}{L_{m2}-L_{m1}}
+$$
+
+$$
+\hat{\delta}=\frac{L_{m1}\hat{t_{m2}}-L_{m2}\hat{t_{m1}}}{L_{m2}-L_{m1}}
+$$
+## 时偏补偿
+对每一个OFDM频域符号，做
+$$
+\hat{Y[k]} = Y[k]e^{-j2\pi k\hat{\delta}/N}
+$$
 
 # 定时偏差接收机的数学模型，时偏估计和补偿
 
@@ -121,7 +182,7 @@ $$
 
 式（1）表明，定时偏差会导致DFT后的频域信号相位旋转。
 
-## 时偏估计
+# 时偏估计
 基站因为同时接收多个手机信号，只会做频域时偏估计，不会做时域时偏估计。
 上行PUSCH，PUCCH，SRS信号可用于时偏估计
 
@@ -279,4 +340,5 @@ $$
 其中$L_m$为符号$m$相对于slot的相对时间偏差。
 
 比如对于100MHz，30KHz SCS载波，symbol 0 长度为352CP+4096 sample, symbol 1 长度为288CP+4096sample, symbol2 CP = 288,$m=2$符号距离slot起始位置有$L_m=(352+4096+288+4096+200)\rho=9120\rho$
+
 

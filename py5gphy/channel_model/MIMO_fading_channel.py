@@ -1,106 +1,66 @@
 # -*- coding:utf-8 -*-
 import numpy as np
 
-from py5gphy.channel_model import SISO_fading_channel
+from py5gphy.channel_model import rayleigh_channel
+from py5gphy.channel_model import rician_channel
 
-class MIMO_FadingChannel():
-    """ MIMO fading channel
+def gen_mimo_channel(Nt, Nr, R_spat, N, samplerate_in_hz,channel, K, fDo,fmax=0,num_of_sinusoids=50):
+    """ generate MIMO channel response
+    input:
+        R_spat: spatial_correlation_matrix
+        Nt: number of Tx antenna
+        Nr: number of Rx antenna
+        N: num_of_sample
+        channel: Rayleign or Rician
+        K in dB for Rician， 
+        fDo(doppler freq in hz) for Rician
+        samplerate_in_hz: Input signal sample rate (Hz)
+        fmax: Maximum Doppler shift (Hz)
+        num_of_sinusoids: Number of sinusoids used to generate Rayleigh filter
     """
-    def __init__(self,num_taps, tap_config_list,samplerate_in_hz,R_spat=np.array([1]),Nt=1,Nr=1):
-        """
-        input:
-            R_spat: spatial_correlation_matrix
-            Nt: number of Tx antenna
-            Nr: number of Rx antenna
-        """
-        self.num_taps = num_taps
-        self.tap_config_list = tap_config_list
-        self.samplerate_in_hz = samplerate_in_hz
+   
+    #step 1, generate Nt X Nr Rayleign or Rician with size = N
+    vec_channel = np.zeros((Nt*Nr, N), 'c8')
+    for m in range(Nt*Nr):
+        if channel == "Rayleign":
+            vec_channel[m,:] = rayleigh_channel.gen_RayleighChannel_filters(N,fmax,samplerate_in_hz,num_of_sinusoids)
+        else:
+            vec_channel[m,:] = rician_channel.gen_RicianChannel_filters(N,K, fDo,fmax,samplerate_in_hz,num_of_sinusoids)
 
-        self.R_spat = R_spat
-        self.Nt = Nt
-        self.Nr = Nr
-    
-    def gen_mimo_tap_filters(self, num_of_sample):
-        """generate num_of_sample of Nt X Nr MIMO matrix * """
-        num_taps = self.num_taps 
-        tap_config_list = self.tap_config_list 
-        samplerate_in_hz = self.samplerate_in_hz 
-
-        R_spat = self.R_spat
+    #step 2 generate MIMO channel
+    if R_spat.shape[0] > 1:
+        #cholesky only support 2-D dimension
         L = np.linalg.cholesky(R_spat)
-        Nt = self.Nt 
-        Nr = self.Nr 
-        
-        #first generate SISO fading channel
-        siso_FadingChannel = SISO_fading_channel.SISO_FadingChannel(num_taps, tap_config_list,samplerate_in_hz)
+    else:
+        L = R_spat
 
-        #generate Nt*Nr tap filters 
-        siso_FadingChannel_filters_list = []
-        for _ in range(Nt*Nr):
-            tap_filters_list,tap_delay_in_sample_list = siso_FadingChannel.gen_tap_filters(num_of_sample)
-            siso_FadingChannel_filters_list.append(tap_filters_list)
-        
-        #generate MIMO matrix 
-        MIMO_tap_filters_list = []
-        for tap in range(num_taps):
-            MIMO_tap_filter = np.zeros((num_of_sample,Nr, Nt),'c8')
-            for sample in range(num_of_sample):
-                #get Nt*Nr uncorrelated filter coeff from each SISO
-                coeffs = np.zeros((Nt*Nr,1),'c8')
-                
-                #get tap filter for each siso_FadingChannel
-                for m in range(Nt*Nr):
-                    tap_filters_list = siso_FadingChannel_filters_list[m]
-                    coeffs[m] = tap_filters_list[tap,sample]
-                
-                vec_H = L @ coeffs
-                # reshape vec_H to Nr X Nt matrix
-                H = vec_H.reshape((Nr, Nt), order='F')
-                MIMO_tap_filter[sample] = H
-            
-            MIMO_tap_filters_list.append(MIMO_tap_filter)
-        
-        return MIMO_tap_filters_list, tap_delay_in_sample_list
+    MIMO_channel = np.zeros((N, Nr, Nt), 'c8')
+    for m in range(N):
+        vec_H = L @ vec_channel[:,m]
+        # reshape vec_H to Nr X Nt matrix
+        H = vec_H.reshape((Nr, Nt), order='F')
+        MIMO_channel[m] = H
     
-    def filter(self, signal_in):
-        """signal_in go through fading channel
-        """
-        Nr = self.Nr 
+    return MIMO_channel
 
-        assert signal_in.shape[0] == self.Nt
-        num_of_sample = signal_in.shape[1]
-
-        MIMO_tap_filters_list, tap_delay_in_sample_list = self.gen_mimo_tap_filters(num_of_sample)
-
-        #MIMO filter
-        signal_out = np.zeros((Nr,num_of_sample), 'c8')
-        for tap in range(self.num_taps):
-            tap_delay_in_sample = tap_delay_in_sample_list[tap]
-            MIMO_tap_filters = MIMO_tap_filters_list[tap]
-
-            tap_out = np.zeros((Nr,num_of_sample), 'c8')
-            for sample in range(num_of_sample):
-                H = MIMO_tap_filters[sample]
-                tap_out[:,sample] = H @ signal_in[:,sample]
-            
-            #tap shift
-            signal_out[:,tap_delay_in_sample:] += tap_out[:,0:num_of_sample-tap_delay_in_sample]
-        
-        return signal_out, MIMO_tap_filters_list, tap_delay_in_sample_list
-    
 
 if __name__ == "__main__":
+    Nt = 1
+    Nr = 1
+    R_spat = np.diag(np.ones(Nt*Nr,'c8'))
+    MIMO_channel = gen_mimo_channel(Nt, Nr, R_spat, N=10, samplerate_in_hz=245760000,channel="Rayleign", K=0, fDo=0,fmax=0,num_of_sinusoids=50)
+    np.allclose(MIMO_channel[0],MIMO_channel[6],atol=1e-7)
+
     Nt = 2
     Nr = 4
     R_spat = np.diag(np.ones(Nt*Nr,'c8'))
-    num_taps = 2
-    tap_config_list=[
-        {"path_delay_in_ns":0,"path_gain_in_db":2,"path_type":"Rayleigh","K_factor":0, "fmax":0,"num_of_sinusoids":2},
-        {"path_delay_in_ns":6,"path_gain_in_db":3,"path_type":"Rician","K_factor":1, "fmax":0,"num_of_sinusoids":2}
-    ]
-    samplerate_in_hz = 245760000
-    mimo_FadingChannel = MIMO_FadingChannel(num_taps, tap_config_list,samplerate_in_hz,R_spat,Nt,Nr)
-    signal_in = np.ones((Nt, 20))
-    signal_out, MIMO_tap_filters_list, tap_delay_in_sample_list = mimo_FadingChannel.filter(signal_in)
+    MIMO_channel = gen_mimo_channel(Nt, Nr, R_spat, N=10, samplerate_in_hz=245760000,channel="Rayleign", K=0, fDo=0,fmax=0,num_of_sinusoids=50)
+    np.allclose(MIMO_channel[0],MIMO_channel[6],atol=1e-7)
+    
+    Nt = 2
+    Nr = 4
+    R_spat = np.diag(np.ones(Nt*Nr,'c8'))
+    MIMO_channel = gen_mimo_channel(Nt, Nr, R_spat, N=10, samplerate_in_hz=245760000,channel="Rician", K=0, fDo=0,fmax=0,num_of_sinusoids=50)
+    np.allclose(MIMO_channel[0],MIMO_channel[6],atol=1e-7)
+    
     pass

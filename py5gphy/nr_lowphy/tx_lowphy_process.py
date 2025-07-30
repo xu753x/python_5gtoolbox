@@ -7,12 +7,14 @@ from scipy.signal import remez
 
 from py5gphy.common import nr_slot
 
-def Tx_low_phy(fd_slot, carrier_config, sample_rate_in_hz):
+def Tx_low_phy(fd_slot, carrier_config, sample_rate_in_hz, Dm=np.zeros(14)):
     """ handle Tx data IFFT, add CP and phase compensation
     could be used for gNodeB DL and UE UL transmission
     td_slot = DL_low_phy(fd_slot)
     input:
         sample_rate_in_hz: time domain sample rate after ifft and add cp
+        Dm is timing error in second for each symbol, it is used to simulate fractional timing error
+              timing error is different for each symbol ifd transmitter-receiver frequency error is non-zero
     """
     
     central_freq_in_hz = int(carrier_config["carrier_frequency_in_mhz"] * (10**6))
@@ -49,6 +51,10 @@ def Tx_low_phy(fd_slot, carrier_config, sample_rate_in_hz):
     for sym in range(14):
         fh_sym = fd_slot[:,sc_size*sym : sc_size*(sym+1)]
         
+        #phase shift with timing error
+        # phase = exp(j*2*i*k*fc*Dm)
+        fh_sym *= np.exp(1j*2*np.pi*np.arange(sc_size)*scs*1000*Dm[sym])
+
         ifftin = np.zeros((num_of_ant,ifftsize),'c8')
         ifftin[:,(ifftsize - sc_size) // 2: (ifftsize + sc_size) // 2] = fh_sym
         ifftout = fft.ifft(fft.ifftshift(ifftin))
