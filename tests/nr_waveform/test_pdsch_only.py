@@ -49,7 +49,7 @@ def test_nr_pdsch_only(filename):
     path = "py5gphy/nr_default_config/"
     with open(path + "default_DL_waveform_config.json", 'r') as f:
         waveform_config = json.load(f)
-    waveform_config['numofsubframes'] = 2
+    waveform_config['numofslots'] = int(2*carrier_config['scs']/15)
     waveform_config['samplerate_in_mhz'] = 122.88
     waveform_config['startSFN'] = 0
     waveform_config['startslot'] = 0
@@ -63,7 +63,12 @@ def test_nr_pdsch_only(filename):
     ssb_config["enable"] = 'False'
     csirs_config_list = []
 
-    fd_waveform, td_waveform, dl_waveform = nr_dl_waveform.gen_dl_waveform(waveform_config, carrier_config, ssb_config, 
-                    pdcch_config_list, search_space_list, coreset_config_list, 
-                    csirs_config_list, pdsch_config_list)
+    [nrSSB_list, nrPdsch_list, nrCSIRS_list, nrPDCCH_list] = nr_dl_waveform.gen_dl_channel_list(
+    waveform_config,carrier_config,
+    ssb_config,pdcch_config_list,
+    search_space_list,coreset_config_list,
+    csirs_config_list,pdsch_config_list
+    )
+    fd_waveform, td_waveform, dl_waveform = nr_dl_waveform.gen_dl_waveform(waveform_config, carrier_config,  
+                nrSSB_list, nrPdsch_list, nrCSIRS_list, nrPDCCH_list )
     assert np.allclose(fd_waveform, ref_fd_slot_data, atol=1e-5)

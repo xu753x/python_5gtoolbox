@@ -16,8 +16,15 @@ def nrDemodulate(insymbols, modtype,noise_var):
     input:
     insymbols: np.array of channel equlization output 
     modtype: ["pi/2-bpsk", "bpsk", "qpsk", "16qam", "64qam", "256qam", "1024qam"]
-    noise_var: complex noise variance 
+    noise_var: noise variance array,noise_var.size should be equal with insymbols.size
     """
+    #to make sure the input is one dimension array
+    insymbols = insymbols.reshape(insymbols.size)
+    noise_var = noise_var.real.reshape(noise_var.size)
+    noise_var=noise_var.astype('f')
+    
+    assert insymbols.size == noise_var.size
+
     modtype = modtype.lower()
     assert modtype in ["pi/2-bpsk", "bpsk", "qpsk", "16qam", "64qam", "256qam", "1024qam"], "modulation type is incorrect"
     if modtype == "bpsk":

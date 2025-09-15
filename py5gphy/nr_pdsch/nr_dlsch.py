@@ -7,6 +7,7 @@ from py5gphy.crc import crc
 from py5gphy.ldpc import nr_ldpc_encode
 from py5gphy.ldpc import nr_ldpc_cbsegment
 from py5gphy.ldpc import nr_ldpc_ratematch
+from py5gphy.ldpc import ldpc_info
 
 def DLSCHEncode(trblk, TBSize, Qm, coderateby1024, num_of_layers, rv, TBS_LBRM, G):
     """ complete one trblk processing of DLSCH CRC, LDPC encoder, rate match

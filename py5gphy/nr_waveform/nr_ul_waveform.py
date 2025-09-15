@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from py5gphy.nr_lowphy import dl_lowphy_process
+from py5gphy.nr_lowphy import tx_lowphy_process
 from py5gphy.common import nr_slot
 from py5gphy.nr_pusch import nr_pusch
 from py5gphy.nr_pucch import nr_pucch_format0
@@ -27,7 +27,7 @@ def gen_ul_waveform(waveform_config, carrier_config, pusch_config_list, srs_conf
     """
     #get info from waveform config
     samplerate_in_mhz = waveform_config["samplerate_in_mhz"]
-    numofsubframes = waveform_config["numofsubframes"]
+    numofslots = waveform_config["numofslots"]
     startSFN = waveform_config["startSFN"]
     startslot = waveform_config["startslot"]
     assert samplerate_in_mhz in [7.68, 15.36, 30.72, 61.44, 122.88, 245.76]
@@ -39,9 +39,7 @@ def gen_ul_waveform(waveform_config, carrier_config, pusch_config_list, srs_conf
     scs = carrier_config['scs']
     BW = carrier_config['BW']
     carrier_prbsize = nr_slot.get_carrier_prb_size(scs, BW)
-
-    numofslots = int(numofsubframes * scs / 15)
-
+    
     #create object lists
     nrPusch_list = []
     for pusch_config in pusch_config_list:
@@ -124,7 +122,7 @@ def gen_ul_waveform(waveform_config, carrier_config, pusch_config_list, srs_conf
         fd_waveform[:, idx*fd_slotsize:(idx+1)*fd_slotsize] = fd_slot_data
 
         ## start DL low phy processing for the slot
-        td_slot = dl_lowphy_process.DL_low_phy(fd_slot_data, carrier_config, sample_rate_in_hz)
+        td_slot = tx_lowphy_process.Tx_low_phy(fd_slot_data, carrier_config)
         
         # slot level phase compensation
         if central_freq_in_hz:
@@ -141,7 +139,7 @@ def gen_ul_waveform(waveform_config, carrier_config, pusch_config_list, srs_conf
 
     ## start DUC processing,channel filter and oversample, output sample rate is fixed to 245.76MHz
     #oversample_rate must be 1,2,4,8,..
-    ul_waveform = dl_lowphy_process.channel_filter(td_waveform, carrier_config, sample_rate_in_hz)
+    ul_waveform = tx_lowphy_process.channel_filter(td_waveform, carrier_config, sample_rate_in_hz)
     
     return fd_waveform, td_waveform, ul_waveform
 

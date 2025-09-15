@@ -7,10 +7,10 @@ import numpy as np
 
 from tests.nr_pdsch import nr_pdsch_testvectors
 from py5gphy.nr_pdsch import nr_pdsch
-from py5gphy.crc import crc
-from py5gphy.ldpc import nr_ldpc_encode
-from py5gphy.ldpc import nr_ldpc_cbsegment
 from py5gphy.common import nr_slot
+from py5gphy.nr_lowphy import tx_lowphy_process
+from py5gphy.nr_lowphy import rx_lowphy_process
+from py5gphy.nr_pdsch import nr_pdsch_dmrs
 
 def get_testvectors():
     path = "tests/nr_pdsch/testvectors"
@@ -43,6 +43,7 @@ def test_nr_pdsch(filename):
         nr_pdsch_testvectors.read_dlsch_testvec_matfile(matfile)
     carrier_config, pdsch_config = nr_pdsch_testvectors.gen_pdsch_testvec_config(pdsch_tvcfg)
     pdsch_config["data_source"] = [1,0,0,1]
+    pdsch_config["precoding_matrix"] = np.array([])
     nrpdsch = nr_pdsch.Pdsch(pdsch_config, carrier_config)
     numofslot = RM_out.shape[0]
     for m in range(numofslot):
@@ -91,6 +92,7 @@ def test_nr_short_pdsch(filename):
         nr_pdsch_testvectors.read_dlsch_testvec_matfile(matfile)
     carrier_config, pdsch_config = nr_pdsch_testvectors.gen_pdsch_testvec_config(pdsch_tvcfg)
     pdsch_config["data_source"] = [1,0,0,1]
+    pdsch_config["precoding_matrix"] = np.array([])
     pdsch_config["NrOfSymbols"] = pdsch_tvcfg['pdschsym_dur']
 
     nrpdsch = nr_pdsch.Pdsch(pdsch_config, carrier_config)
@@ -108,3 +110,4 @@ def test_nr_short_pdsch(filename):
         sel_ref_fdslot_data = ref_fd_slot_data[:,m*carrier_prb_size*12*14:(m+1)*carrier_prb_size*12*14]
         assert np.allclose(fd_slot_data, sel_ref_fdslot_data, atol=1e-5)
         print("pass comparison for slot {}".format(m))
+

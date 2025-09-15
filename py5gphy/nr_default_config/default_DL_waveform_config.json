@@ -1,9 +1,9 @@
 {
     "name": "DL waveform config",
-    "numofsubframes": 20,
+    "numofslots": 20,
     "_comment": "time domain data sample rate in khz, usually 30.72M*[1,2,4,8]",
     "samplerate_in_mhz":  122.88,
     "_comment": "waveform SFN and slot num in SFN",
     "startSFN": 0,
     "startslot": 0    
-  }
+}

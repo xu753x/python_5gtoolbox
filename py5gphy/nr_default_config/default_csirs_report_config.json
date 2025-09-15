@@ -1,0 +1,17 @@
+{
+    "enable": "True",
+    "comment": " Channel quality indicator table ('table1', 'table2', 'table3'), as defined in TS 38.214 Tables 5.2.2.1-2 to 5.2.2.1-4",
+    "comment": "'table1':64QAM, 'table2':256QAM, 'table3':64QAM with low Spectral efficient",
+    "CQITable ": "table1",
+    "comment": " Codebook type for CSI parameter computation,s support Type1SinglePanel only",
+    "CodebookType ": "Type1SinglePanel",
+    "comment": "Mode of CQI reporting ('Subband', 'Wideband')",
+    "CQIMode ": "Subband",
+    "comment": " Mode of PMI reporting ('Subband', 'Wideband')",
+    "PMIMode ": "Subband",
+    "comment": "Size of the subband, as defined in TS 38.214 Table 5.2.1.4-2 (required only when CQIMode or PMIMode is 'Subband')",
+    "SubbandSize ": 4,
+    "comment": " Codebook mode according to which the codebooks are derived. The value must be 1 or 2",
+    "CodebookMode ": 1
+    
+}

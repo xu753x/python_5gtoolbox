@@ -57,7 +57,7 @@ class NrPUSCH():
     def process(self,fd_slot_data, RE_usage_inslot,slot):
         """
         """
-        #first check if this is PDSCH slot
+        #first check if this is PUSCH slot
         period_in_slot = self.pusch_config['period_in_slot']
         allocated_slots = self.pusch_config['allocated_slots']
         if (slot % period_in_slot) not in allocated_slots:
@@ -76,6 +76,55 @@ class NrPUSCH():
         else: 
             #retransmission
             trblk = self.trblk
+
+        #PUSCH DMRS processing
+        fd_slot_data, RE_usage_inslot, DMRSinfo = nr_pusch_dmrs.process(fd_slot_data,RE_usage_inslot,
+                self.pusch_config, slot)
+        DMRS_symlist = DMRSinfo['DMRS_symlist'] 
+
+        #calculate Gtotal based on 6.2.7 Data and control multiplexing
+        RE_usage_inslot, pusch_data_RE_num = \
+            nrpusch_resource_mapping.pusch_data_re_mapping_prepare(RE_usage_inslot, self.pusch_config)
+        Gtotal = Qm * num_of_layers * pusch_data_RE_num
+
+        g_seq = nr_pusch_uci.ULSCHandUCIProcess(self.pusch_config, trblk, Gtotal, rv, DMRS_symlist)
+
+        rnti = self.pusch_config['rnti']
+        nNid = self.pusch_config['nNid']
+        nTransPrecode = self.pusch_config['nTransPrecode']
+        nNrOfAntennaPorts = self.pusch_config['nNrOfAntennaPorts']
+        nPMI = self.pusch_config['nPMI']
+
+        precoding_matrix = nr_pusch_precoding.get_precoding_matrix(num_of_layers, nNrOfAntennaPorts, nPMI)
+        ##scrambling, modulation, layer mapping, precoding
+        precoded = nr_pusch_process.nr_pusch_process( \
+            g_seq, rnti, nNid, Qm, num_of_layers,nTransPrecode, \
+            RBSize, nNrOfAntennaPorts, precoding_matrix)
+
+        #PDSCh resouce mapping to Slot RE
+        fd_slot_data =nrpusch_resource_mapping.pusch_data_re_mapping(
+            precoded, fd_slot_data, RE_usage_inslot, self.pusch_config)
+
+        return fd_slot_data, RE_usage_inslot
+    
+    def rx_process(self,fd_slot_data, slot):
+        """ PUDSCH receiving process
+        """
+        #pdsch timing ofsfet estimation
+        
+        #timing offset compensation
+
+        #pdsch channel estimation
+
+        #PDSCh channel equalization
+
+        #DSCH receiving processing
+               
+        TBSize = self.info["TBSize"]
+        Qm = self.info["Qm"]
+        num_of_layers = self.pusch_config['num_of_layers']
+        rv = self.getnextrv()
+        RBSize = self.pusch_config['ResAlloType1']['RBSize']
 
         #PUSCH DMRS processing
         fd_slot_data, RE_usage_inslot, DMRSinfo = nr_pusch_dmrs.process(fd_slot_data,RE_usage_inslot,

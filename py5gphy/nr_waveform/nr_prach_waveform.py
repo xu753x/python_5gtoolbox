@@ -14,14 +14,14 @@ def gen_prach_waveform(waveform_config, carrier_config, prach_config,prach_param
     """
     #get info from waveform config
     samplerate_in_mhz = waveform_config["samplerate_in_mhz"]
-    numofsubframes = waveform_config["numofsubframes"]
+    numofslots = waveform_config["numofslots"]
     startSFN = waveform_config["startSFN"]
     assert samplerate_in_mhz in [7.68, 15.36, 30.72, 61.44, 122.88, 245.76]
     sample_rate_in_hz = int(samplerate_in_mhz*(10**6))
     sample_size_in_one_sfn = int(sample_rate_in_hz/100) #
         
     #number of system frame
-    numof_sfn = math.ceil(numofsubframes/10)
+    numof_sfn = math.ceil(numofslots*carrier_config["scs"]/15/10)
 
     nrprach = nr_prach.Prach(carrier_config, prach_config, prach_parameters)
     td_waveform = np.zeros((1, numof_sfn*sample_size_in_one_sfn), 'c8')

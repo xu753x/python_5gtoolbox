@@ -61,6 +61,69 @@ def get_carrier_prb_size(scs, BW):
         carrier_prbsize = scs30_list[BW]
     return carrier_prbsize
 
+def get_FFT_IFFT_size(carrier_prb_size):
+    #IFFT output data will go through FIR filter
+    #below 0.85 comes from Matlab 5G toolbox and is used to provide some room for FIR filter transition width
+    #IFFT size could not be too short
+    ifftsize = int((2 ** np.ceil(np.log2(carrier_prb_size*12/0.85))))
+    return ifftsize
+
+def get_symbol_timing_offset(scs):
+    """ generate timing offset of each symbol data section to the beginning of slot
+    it output two list
+    symbols_timing_offset_list is timing offset in second
+    symbols_sample_offset_list is sample offset
+         for scs 15, sample rate is 30.72MHz
+         for scs 30, sample rate is 122.88MHz
+    """
+    #generate timing offset in second of each symbol data  to the beginning of slot
+    if scs == 15:
+        # assume sample rate = 30.72MHz
+        # IFFT size = 2048, CP length per symbol = [160,[144]*6,160,[140]*6]
+        scs15_cp_list = np.array([160] + [144]*6 + [160] + [144]*6 )
+        symbols_sample_offset_list = np.zeros(14)
+        offset = 0
+        for m in range(14):
+            offset += scs15_cp_list[m]
+            symbols_sample_offset_list[m] = offset
+            offset += 2048
+        symbols_timing_offset_list = symbols_sample_offset_list/(30.72* 10**6 ) 
+    else:
+        # assume sample rate = 122.88MHz
+        # IFFT size = 4096, CP length per symbol = [352,[288]*13]
+        scs30_cp_list = np.array([352] + [288]*13)
+        symbols_sample_offset_list = np.zeros(14)
+        offset = 0
+        for m in range(14):
+            offset += scs30_cp_list[m]
+            symbols_sample_offset_list[m] = offset
+            offset += 4096
+        symbols_timing_offset_list = symbols_sample_offset_list/(122.88* 10**6 )
+    
+    return symbols_timing_offset_list,symbols_sample_offset_list
+
+def get_sample_rate_and_CP_size(scs,BW):
+    """return 14 symbol CP sample size """
+    carrier_prb_size = get_carrier_prb_size(scs, BW)
+    fftsize = get_FFT_IFFT_size(carrier_prb_size)
+    sample_rate_in_hz = fftsize * scs * 1000
+    
+    if scs == 15:
+        # assume sample rate = 30.72MHz
+        # IFFT size = 2048, CP length per symbol = [160,[144]*6,160,[140]*6]
+        scs15_cp_list = np.array([160] + [144]*6 + [160] + [144]*6 )
+        CPs = scs15_cp_list*fftsize/2048
+        CPs_size = [int(x) for x in CPs]
+    else:
+        # assume sample rate = 122.88MHz
+        # IFFT size = 4096, CP length per symbol = [352,[288]*13]
+        scs30_cp_list = np.array([352] + [288]*13)
+        CPs = scs30_cp_list*fftsize/4096
+        CPs_size = [int(x) for x in CPs]
+    
+    return sample_rate_in_hz,CPs_size
+
+
 if __name__ == "__main__":
     assert get_REusage_type(0) == 'empty'
     assert get_REusage_type(22) == 'PDCCH-DATA'

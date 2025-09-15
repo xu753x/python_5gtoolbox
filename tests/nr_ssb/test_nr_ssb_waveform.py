@@ -40,7 +40,7 @@ def test_ssb_waveform(filename):
     
     with open(path + "default_DL_waveform_config.json", 'r') as f:
         waveform_config = json.load(f)
-    waveform_config["numofsubframes"] = 10
+    waveform_config["numofslots"] = int(10*carrier_config['scs']/15)
     waveform_config["startSFN"] = 0
     waveform_config["startslot"] = 0
     

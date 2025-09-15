@@ -58,9 +58,14 @@ def test_DL_waveform(filename):
     pdsch_config_list = []
     pdsch_config_list.append(pdsch_config)
 
-    fd_waveform, td_waveform, dl_waveform = nr_dl_waveform.gen_dl_waveform(waveform_config, carrier_config, ssb_config, 
-                    pdcch_config_list, search_space_list, coreset_config_list, 
-                    csirs_config_list, pdsch_config_list)
+    [nrSSB_list, nrPdsch_list, nrCSIRS_list, nrPDCCH_list] = nr_dl_waveform.gen_dl_channel_list(
+    waveform_config,carrier_config,
+    ssb_config,pdcch_config_list,
+    search_space_list,coreset_config_list,
+    csirs_config_list,pdsch_config_list
+    )
+    fd_waveform, td_waveform, dl_waveform = nr_dl_waveform.gen_dl_waveform(waveform_config, carrier_config,  
+                nrSSB_list, nrPdsch_list, nrCSIRS_list, nrPDCCH_list )
     
     #fd_slot_data generated from matlab 5g toolbox contain PDSCH, PDCCH and CSI-RS, not include SSB
     #waveform is time domain data generated from matlab 5g toolbox that also include SSB

@@ -61,7 +61,7 @@ def test_nr_prach_waveform(filename):
     path = "py5gphy/nr_default_config/"
     with open(path + "default_UL_waveform_config.json", 'r') as f:
         waveform_config = json.load(f)
-    waveform_config['numofsubframes'] = 10
+    waveform_config['numofslots'] = int(10*carrier_config['scs']/15)
     waveform_config['samplerate_in_mhz'] = 122.88
     waveform_config['startSFN'] = 0
     waveform_config['startslot'] = 0

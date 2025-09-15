@@ -39,5 +39,5 @@ def test_nr_demodulation(filename):
     demod_data = matfile['demod_data'][0]
     noise_power = matfile['noise_power'][0][0]
                 
-    hardbits, LLR = nr_Demodulation.nrDemodulate(demod_data, modtype,noise_power)
+    hardbits, LLR = nr_Demodulation.nrDemodulate(demod_data, modtype,noise_power*np.ones(demod_data.size))
     assert np.allclose(LLR, LLR_ref,atol=1e-5)
