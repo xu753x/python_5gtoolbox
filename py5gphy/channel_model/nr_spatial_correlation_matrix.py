@@ -15,7 +15,7 @@ TS38.104 Table G.2.3.1.2-3: MIMO correlation matrices for medium correlation
 provided R_spat for 2x4 case is not positive semi-definite
 add value_a = 0.00010 to fix it
 """
-def get_nr_MIMO_Rspat(Nt, Nr,  Polarization,direction,MIMOCorrelation,parameters=[0,0]):
+def get_nr_MIMO_Rspat(Nt, Nr,  Polarization="uniform",direction="DL",MIMOCorrelation="customized",parameters=[0,0]):
     """ get MIMO Channel Correlation Matrices
     input:
     Nt: tx antenna number, in [1,2,4,8] different option for different Polarization
@@ -30,7 +30,7 @@ def get_nr_MIMO_Rspat(Nt, Nr,  Polarization,direction,MIMOCorrelation,parameters
         if direction= UL and Polarization="cross-polar"
             MIMOCorrelation is in ["high", "mediumA", "low"]
         if MIMOCorrelation = "customized"
-            use [alpha, beta, gamma] defined in parameters input
+            use [alpha, beta ] defined in parameters input
     Polarization: "uniform" or "cross-polar"
     direction: "DL" or "UL"
     parameters: include [alpha, beta] values
@@ -51,6 +51,9 @@ def get_nr_MIMO_Rspat(Nt, Nr,  Polarization,direction,MIMOCorrelation,parameters
         R_tx = _gen_correlation_matrix(Nt,alpha) #Tx correlation matrix
         R_rx = _gen_correlation_matrix(Nr,beta) #Rx correlation matrix
         R_spat = np.kron(R_tx, R_rx)        
+
+        value_a = 0.00012
+        R_spat = (R_spat + value_a*np.eye(Nt*Nr,dtype=np.complex64))/(1+value_a)
     else:
         if Polarization == "uniform" and direction=="DL":
             R_spat = _Rspat_for_uniform_DL(Nt, Nr,MIMOCorrelation)
@@ -312,9 +315,48 @@ def _gen_correlation_matrix(size, delta):
     
     return R
 
+def gen_corr_MIMO_channel(R_spat,Nr,Nt,N):
+    """generate N size of NrXNt corrH with Rspat correlation"""
+    assert R_spat.shape[0] == Nr*Nt
+    
+    rng = np.random.default_rng()
+    H = rng.normal(0,1,(Nr*Nt,N))
+
+    #cholesky only support 2-D dimension
+    L = np.linalg.cholesky(R_spat)
+    vec_H = L @ H
+
+    corrH = np.zeros((N,Nr,Nt),'c8')
+    for n in range(N):
+        corrH[n] = vec_H[:,n].reshape((Nr,Nt),order='F')
+    
+    return corrH
+
+
+def Rspat_est(corrH):
+    """ estimate RSpat from channel estimation result"""
+    N,Nr,Nt = corrH.shape
+
+    est_R_spat = np.zeros((Nr*Nt,Nr*Nt),'c8')
+    
+    for idx in range(N):
+        sel_H = corrH[idx,:,:]
+        #column first,[[1,2,3],[4,5,6]] reshape to [1,4,2,5,3,6]T
+        vec_H = sel_H.reshape((Nr*Nt,1),order='F')
+        est_R_spat += vec_H @ vec_H.conj().T
+
+    #average
+    est_R_spat = est_R_spat/(N)
+    return est_R_spat
 
 if __name__ == "__main__":
     """ run test"""
+    
+    Nr=2
+    Nt=2
+    R_spat = get_nr_MIMO_Rspat(Nt, Nr,  Polarization="uniform",direction="DL",MIMOCorrelation="customized",parameters=[0,0])
+    corrH = gen_corr_MIMO_channel(R_spat,Nr,Nt,2000)
+    est_R_spat = Rspat_est(corrH)
     
     assert np.array_equal(_gen_correlation_matrix(1,0), np.eye(1,dtype=np.complex64) )
     
@@ -355,6 +397,7 @@ if __name__ == "__main__":
 
     test_nr_spatial_correlation_matrix.test_customized_config()
 
-    
+    #verify 
+
     pass
     

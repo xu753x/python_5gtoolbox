@@ -71,3 +71,16 @@ def read_UL_default_config_files():
     default_UL_config["pucch_format3_config"] = pucch_format3_config
     default_UL_config["pucch_format4_config"] = pucch_format4_config
     return default_UL_config
+
+def read_default_channel_model_config():
+    path = "py5gphy/nr_default_config/"
+    
+    with open(path + "default_channel_model.json", 'r') as f:
+        channel_model_config = json.load(f)
+
+    return channel_model_config
+
+
+if __name__ == "__main__":
+    read_DL_default_config_files()
+    pass

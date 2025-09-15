@@ -41,8 +41,13 @@ waveform_config, carrier_config, ssb_config, csirs_config_list, \
 #dl_waveform is timedomain waveform after channel filter(one FIR and N halfband filter)
 #sample rate is fixed to 245.76MHz
 #data size = number of subframes * 245.76 * 10^6
-fd_waveform, td_waveform, dl_waveform = nr_dl_waveform.gen_dl_waveform(waveform_config, carrier_config, ssb_config, 
-                    pdcch_config_list, search_space_list, coreset_config_list, 
-                    csirs_config_list, pdsch_config_list)
+[nrSSB_list, nrPdsch_list, nrCSIRS_list, nrPDCCH_list] = nr_dl_waveform.gen_dl_channel_list(
+    waveform_config,carrier_config,
+    ssb_config,pdcch_config_list,
+    search_space_list,coreset_config_list,
+    csirs_config_list,pdsch_config_list
+)
+fd_waveform, td_waveform, dl_waveform = nr_dl_waveform.gen_dl_waveform(waveform_config, carrier_config,  
+                nrSSB_list, nrPdsch_list, nrCSIRS_list, nrPDCCH_list )
 
 pass

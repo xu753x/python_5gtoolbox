@@ -57,6 +57,8 @@ def nr_crc_decode(blkandcrc, poly, mask=0):
         not np.any(np.nonzero(blkandcrc > 1))
     )
 
+    blkandcrc = blkandcrc.astype('i1')
+    
     crcpoly = _get_crcpoly(poly)
     L = crcpoly.size  # CRC size
 

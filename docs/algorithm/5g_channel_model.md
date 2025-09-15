@@ -7,12 +7,12 @@ python实现：py5hphy\channel_model\nr_pathloss_xx.py
 
 小尺度衰落指信号多径传输导致的接收信号合并带来的幅度和相位快速变化。
 
-Rayleign衰落信道和Rician衰落信道是两个最通用的小尺度衰落信道。Rayleign衰落信道是零均值，实部虚部是独立同分布的复高斯信道，信号幅度服从Rayleign分布，Rayleign衰落信道用于NLOS场景。在LOS场景，有直射径存在，信号幅度服从Rician分布，为Rician衰落信道。
+Rayleigh衰落信道和Rician衰落信道是两个最通用的小尺度衰落信道。Rayleigh衰落信道是零均值，实部虚部是独立同分布的复高斯信道，信号幅度服从Rayleigh分布，Rayleigh衰落信道用于NLOS场景。在LOS场景，有直射径存在，信号幅度服从Rician分布，为Rician衰落信道。
 
-无线信道环境可以认为是多径信道，每一径的分布为Rayleign衰落信道或Rician衰落信道。
+无线信道环境可以认为是多径信道，每一径的分布为Rayleigh衰落信道或Rician衰落信道。
 
 3GPP TR38.901 7.7 Channel models for link-level evaluations介绍了两种无线信道环境模型：CDL model and Tapped Delay Line (TDL) models model。本项目实现了TDL model。
-3GPP提供了5中TDL model from TDL-A to TDL-E，每种TDL模型提供了每一tap的相对时延，功率，以及Rayleign衰落信道或Rician衰落信道模型。每种TDL model代表一种频域上信道变化的快慢。
+3GPP提供了5中TDL model from TDL-A to TDL-E，每种TDL模型提供了每一tap的相对时延，功率，以及Rayleigh衰落信道或Rician衰落信道模型。每种TDL model代表一种频域上信道变化的快慢。
 
 上面介绍的时单入单出(SISO)信道,MIMO信道可以认为是由$N_tN_r$个SISO信道组成，其中$N_t$为发送天线个数，$N_r$为接收天线个数。生成MIMO信道时还需要考虑信道间相关性，3GPP TS36.101（LTE下行）， TS36.104（LTE上行）, TS38.101-4（5G下行）, TS38.104（5G上行）提供了uniform linear arrays和cross-polar两种天线类型下MIMO相关性的参数。
 
@@ -22,7 +22,7 @@ Rayleign衰落信道和Rician衰落信道是两个最通用的小尺度衰落信
 
 总结下来，链路仿真中的无线信道需要包含以下特性：
 * MIMO信道，支持不同相关性设置
-* 多径信道，每一径都是Rayleign衰落信道或Rician衰落信道，每一径的相对时延，相对功率可变，每一径支持不同的多普勒频移
+* 多径信道，每一径都是Rayleigh衰落信道或Rician衰落信道，每一径的相对时延，相对功率可变，每一径支持不同的多普勒频移
 * 发送机和接收机间定时偏差
 * 晶体振荡器频偏导致的(1)载波频偏(2)采样时钟偏差(3)每个symbol定时漂移
 
@@ -40,13 +40,13 @@ chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/file:///C:/Users/jl1274/Down
 * Amirhossein Alimohammad, Saeed F. Fard, Bruce F. Cockburn, Christian Schlegel
     "A Compact Rayleigh and Rician Fading Simulator Based on Random Walk Processes"
 
-# Rayleign衰落信道和Rician衰落信道
+# Rayleigh衰落信道和Rician衰落信道
 时域接收信号$r(t)=h(t)s(t)+n(t)$,其中$h(t)$为无线信道。
 
 无线传播环境中存在大量的散射，接收机接收的信号为无数散射信号之和，根据中心极限定理，$h(t)=h_I(t)+jh_Q(t)$表现为独立同分布的复高斯分布.
 
-## Rayleign衰落信道
-在NLOS环境，$h_I(t),h_Q(t)$为零均值独立同分布高斯，$h_I(t)\sim N(0,\sigma^2)$,$h_Q(t)\sim N(0,\sigma^2)$，令$r(t)=\sqrt{h_I(t)^2+h_Q(t)^2}$为信号幅度，$r(t)$分布为Rayleign分布：
+## Rayleigh衰落信道
+在NLOS环境，$h_I(t),h_Q(t)$为零均值独立同分布高斯，$h_I(t)\sim N(0,\sigma^2)$,$h_Q(t)\sim N(0,\sigma^2)$，令$r(t)=\sqrt{h_I(t)^2+h_Q(t)^2}$为信号幅度，$r(t)$分布为Rayleigh分布：
 $$
 f(r(t))=\frac{r(t)}{\sigma^2}e^{-r(t)^2/(2\sigma^2)}
 $$
@@ -69,14 +69,14 @@ $$
 $\nu^2=\frac{K}{K+1}$, $\sigma^2=\frac{1}{K+1}$
 
 Rician衰落信道可以表示为：
-$h_{Rician}=\sqrt{\frac{K}{K+1}}e^{j\theta}+\sqrt{\frac{1}{K+1}}h_{Rayleign}$
+$h_{Rician}=\sqrt{\frac{K}{K+1}}e^{j\theta}+\sqrt{\frac{1}{K+1}}h_{Rayleigh}$
 
-## 如何仿真产生Rayleign衰落信道和Rician衰落信道
-Rayleign衰落信道和Rician衰落信道是复高斯分布，如果不考虑信道的时变特性，也就是假设在一段时间内信道不变，则可以用$randn()+j*randn()来产生。
+## 如何仿真产生Rayleigh衰落信道和Rician衰落信道
+Rayleigh衰落信道和Rician衰落信道是复高斯分布，如果不考虑信道的时变特性，也就是假设在一段时间内信道不变，则可以用$randn()+j*randn()来产生。
 
-考虑到时变特性，"A Compact Rayleigh and Rician Fading Simulator Based on Random Walk Processes"中提出了采用多个$sin$波形求和的模型实现Rayleign衰落信道和Rician衰落信道的方法。本项目采用其中的 Model I实现Rayleign衰落信道，model IV实现Rician衰落信道。
+考虑到时变特性，"A Compact Rayleigh and Rician Fading Simulator Based on Random Walk Processes"中提出了采用多个$sin$波形求和的模型实现Rayleigh衰落信道和Rician衰落信道的方法。本项目采用其中的 Model I实现Rayleigh衰落信道，model IV实现Rician衰落信道。
 ***
-**基于Model I的离散Rayleign衰落信道实现：**
+**基于Model I的离散Rayleigh衰落信道实现：**
 $$
 h_{I,Rayleigh}[m]=\sqrt{\frac{2}{N}}\displaystyle\sum\limits_{k=1}^{N}\cos(2\pi f_DT_sm\cos{\alpha_n+\varphi_n}) \\
 h_{Q,Rayleigh}[m]=\sqrt{\frac{2}{N}}\displaystyle\sum\limits_{k=1}^{N}\cos(2\pi f_DT_sm\sin{\alpha_n+\psi_n}) \\
@@ -155,7 +155,7 @@ $$
 
 ## 已知MIMO 空间相关矩阵如何生成MIMO信道矩阵$H$
 1. Cholesky decomposition $ R_{spat}=LL^H$，其中$L$为下三角矩阵
-2. 根据信道模型生成$N_r \times N_t$个Rayleign衰落信道或Rician衰落信道，得到列向量$A$
+2. 根据信道模型生成$N_r \times N_t$个Rayleigh衰落信道或Rician衰落信道，得到列向量$A$
 3. 生成$vecH=LA$
 4. $H=reshape(vecH,N_r, N_t)$
 
@@ -299,7 +299,7 @@ $ x_t(n)=x_f(n-n_\delta)$为发送机发送出去的信号
 
 其中:
 * $N_r$为接收天线数目，$N_t$为发送天线数目
-* $h_{i,j}(n)$为发送天线$j$到接收天线$i$的时域信道响应,$h_{i,j}(n)$为Rayleign衰落信道或Rician衰落信道.文章前面章节介绍了如何生成MIMO信道的$h_{i,j}(n)$矩阵
+* $h_{i,j}(n)$为发送天线$j$到接收天线$i$的时域信道响应,$h_{i,j}(n)$为Rayleigh衰落信道或Rician衰落信道.文章前面章节介绍了如何生成MIMO信道的$h_{i,j}(n)$矩阵
 
 ***
 
@@ -319,7 +319,7 @@ h_{i,j}(n） = \frac{1}{\sqrt{K+1}}h_{Rayleigh}[n])+\sqrt\frac{K}{K+1}e^{j(2\pi 
 $$
 $K>0$ 代表接收信号经过了$e^{j(2\pi f_{Do}T_sm+\phi_o)}$多普勒频移
 
-注意这个多普勒频移值和Rayleign衰落信道和Rician衰落信道中的最大多普勒频移不一样。Rayleign衰落信道和Rician衰落信道中的最大多普勒频移是用于产生信道的时变特性，这个值是Rician衰落信道$f_{Do}$为直射径的多普勒频移。对Rayleign衰落信道，这个值为0
+注意这个多普勒频移值和Rayleigh衰落信道和Rician衰落信道中的最大多普勒频移不一样。Rayleigh衰落信道和Rician衰落信道中的最大多普勒频移是用于产生信道的时变特性，这个值是Rician衰落信道$f_{Do}$为直射径的多普勒频移。对Rayleigh衰落信道，这个值为0
 ***
 多径接收信道合并：
 $$
@@ -337,7 +337,7 @@ $$
 * 发送机相对接收机的定时偏差
 * 发送机相对接收机的晶体振荡器偏差
 * 最大多普勒频移
-* 多径信道分布，包括径的总数，以及每一径的delay，功率，Rayleign衰落信道或者Rician衰落信道,Rician衰落信道还需要提供$K$值和直射径多普勒频移
+* 多径信道分布，包括径的总数，以及每一径的delay，功率，Rayleigh衰落信道或者Rician衰落信道,Rician衰落信道还需要提供$K$值和直射径多普勒频移
 
   TDL模型提供了几种多径信道分布类型
 * $N_t$发送天线个数
@@ -345,7 +345,6 @@ $$
 * MIMO信道相关矩阵
 * 噪声功率
 * 干扰信号，可以来自邻区，或者MU-MIMO中同调度的其他UE信号
-
 
 note: install Markdown Preview Mermaid Support externsion in Vscode to display the diagram
 ``` mermaid

@@ -11,7 +11,10 @@
     "BW": 40,
     "_comment": "subcarrier space",
     "scs": 30,
+    "_comment": "number of Tx antenna",
     "num_of_ant": 1,
+    "_comment": "number of Rx antenna",
+    "Nr": 1,
     "comment": "maxMIMO_layers should not greater than num_of_ant",
     "maxMIMO_layers": 1,
     "duplex_type": "TDD"

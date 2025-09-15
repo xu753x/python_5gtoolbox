@@ -1,8 +1,10 @@
 # -*- coding:utf-8 -*-
 
 import numpy as np
+import copy
 
 from py5gphy.common import nr_slot
+from py5gphy.nr_pdsch import nr_pdsch_dmrs
 
 def pdsch_data_re_mapping_prepare(RE_usage_inslot, pdsch_config):
     """ calculate total RE number that PDSCH data can map to,
@@ -82,6 +84,49 @@ def pdsch_data_re_mapping(pdsch_precoded, fd_slot_data, RE_usage_inslot, pdsch_c
     
     return fd_slot_data
 
+def copy_Rx_pdsch_resource(rx_fd_slot_data,pdsch_config):
+    #get info
+    StartSymbolIndex = pdsch_config['StartSymbolIndex']
+    NrOfSymbols = pdsch_config['NrOfSymbols']
+    RBStart = pdsch_config['ResAlloType1']['RBStart']
+    RBSize = pdsch_config['ResAlloType1']['RBSize']
+
+    Ld = StartSymbolIndex + NrOfSymbols #38.211 Table 7.4.1.1.2-3: PDSCH DM-RS positions l for single-symbol DM-RS.
+
+    DMRSAddPos = pdsch_config["DMRS"]["DMRSAddPos"]
+    DMRS_symlist = nr_pdsch_dmrs.get_DMRS_symlist(Ld,DMRSAddPos  )
+    PortIndexList = pdsch_config["PortIndexList"]
+    num_of_layers = pdsch_config['num_of_layers']
+    PortIndexList = PortIndexList[0:num_of_layers]
+
+    NumCDMGroupsWithoutData = pdsch_config["DMRS"]["NumCDMGroupsWithoutData"]
+    
+    if NumCDMGroupsWithoutData == 2:
+        #all RE in one DMRS PRB are assigned for DMRS or DMRS reserved
+        dmrs_RE_map_in_PRB = np.ones(12,'i1')
+    else:
+        dmrs_RE_map_in_PRB = np.zeros(12,'i1')
+        if 1000 in PortIndexList or 1001 in PortIndexList:
+            #RE 0,2,4,.. used for DMRS
+            dmrs_RE_map_in_PRB[0::2] = 1
+        if 1002 in PortIndexList or 1003 in PortIndexList:
+            #RE 0,2,4,.. used for DMRS
+            dmrs_RE_map_in_PRB[1::2] = 1
+
+    carrier_RE_size = len(rx_fd_slot_data[0,:]) // 14
+    Nr = rx_fd_slot_data.shape[0]   
+
+    pdsch_resource = np.zeros((NrOfSymbols,RBSize*12,Nr),'c8')
+    pdsch_RE_usage = np.zeros((NrOfSymbols,RBSize*12))
+    for sym in range(StartSymbolIndex, StartSymbolIndex+NrOfSymbols):
+        start_pos = sym*carrier_RE_size + RBStart*12
+        for nr in range(Nr):
+            pdsch_resource[sym - StartSymbolIndex,:,nr] = copy.copy(rx_fd_slot_data[nr,start_pos : start_pos + RBSize*12])
+
+        if sym in DMRS_symlist:
+            pdsch_RE_usage[sym - StartSymbolIndex,:] = np.tile(dmrs_RE_map_in_PRB,RBSize)
+    
+    return pdsch_resource, pdsch_RE_usage
 
 if __name__ == "__main__":
     print("test PDSCH resource mapping")

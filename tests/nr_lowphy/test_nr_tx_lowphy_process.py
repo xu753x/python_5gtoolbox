@@ -7,6 +7,7 @@ import numpy as np
 import json
 
 from py5gphy.nr_lowphy import tx_lowphy_process
+from py5gphy.common import nr_slot
 
 def get_testvectors():
     path = "tests/nr_lowphy/testvectors"
@@ -55,6 +56,9 @@ def test_nr_lowphy(filename):
     else:
         numofslot = 4
 
+    carrier_prb_size = nr_slot.get_carrier_prb_size(scs, BW)
+    ifftsize = nr_slot.get_FFT_IFFT_size(carrier_prb_size)
+
     fd_slotsize = int(fd_slot_data.size // numofslot)
     td_slotsize = int(waveform_ref.size // numofslot)
             
@@ -62,8 +66,8 @@ def test_nr_lowphy(filename):
             
     for idx in range(numofslot):
         sel_fd_slot_data = fd_slot_data[:,idx*fd_slotsize:(idx+1)*fd_slotsize]
-        td_slot = tx_lowphy_process.Tx_low_phy(sel_fd_slot_data, carrier_config, SampleRate)
+        td_slot = tx_lowphy_process.Tx_low_phy(sel_fd_slot_data, carrier_config)
         td_waveform[0, idx*td_slotsize:(idx+1)*td_slotsize] = td_slot
             
-    assert np.allclose(td_waveform, waveform_ref,atol=1e-5)
+    assert np.allclose(td_waveform, waveform_ref*np.sqrt(ifftsize),atol=1e-5)
     

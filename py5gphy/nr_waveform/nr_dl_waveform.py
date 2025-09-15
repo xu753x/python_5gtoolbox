@@ -10,15 +10,22 @@ from py5gphy.nr_pdcch import nr_pdcch
 from py5gphy.nr_pdcch import nr_searchspace
 from py5gphy.nr_csirs import nr_csirs
 
-def gen_dl_waveform(waveform_config, carrier_config, ssb_config, 
-                    pdcch_config_list, search_space_list, coreset_config_list, 
-                    csirs_config_list, pdsch_config_list):
+def gen_dl_waveform(waveform_config, carrier_config, 
+                    nrSSB_list=[], 
+                    nrPdsch_list=[], 
+                    nrCSIRS_list=[], 
+                    nrPDCCH_list=[], 
+                    Dm=np.empty(0)
+                    ):
     """ generate DL frequency domain and time domain waveform
     fd_waveform, td_waveform,dl_waveform = gen_dl_waveform()
     input:
         waveform_config:
         carrier_config:
         ssb_config:
+        Dm: each line is timing error for each symbol in the slot, there are total numofslots slots
+            this is used for fractional timing offset processing before IFFT
+        en_channel_filter: enable channel filter or not
     output:
         fd_waveform: frequency waveform, num_of_ant X slot-size array
         td_waveform: time waveform after IFT, add CP, phase compensation, num_of_ant X slot-size array
@@ -27,10 +34,10 @@ def gen_dl_waveform(waveform_config, carrier_config, ssb_config,
     """
     #get info from waveform config
     samplerate_in_mhz = waveform_config["samplerate_in_mhz"]
-    numofsubframes = waveform_config["numofsubframes"]
+    numofslots = waveform_config["numofslots"]
     startSFN = waveform_config["startSFN"]
     startslot = waveform_config["startslot"]
-    assert samplerate_in_mhz in [7.68, 15.36, 30.72, 61.44, 122.88, 245.76]
+    assert samplerate_in_mhz in [7.68, 15.36, 30.72, 61.44, 122.88, 245.76,245.76*2,245.76*4]
     sample_rate_in_hz = int(samplerate_in_mhz*(10**6))
 
     #get info from carrier config
@@ -39,12 +46,107 @@ def gen_dl_waveform(waveform_config, carrier_config, ssb_config,
     scs = carrier_config['scs']
     BW = carrier_config['BW']
     carrier_prbsize = nr_slot.get_carrier_prb_size(scs, BW)
+    
+    #init
+    fd_slotsize = carrier_prbsize*12*14
+    fd_waveform = np.zeros((num_of_ant, numofslots*fd_slotsize), 'c8')
 
-    numofslots = int(numofsubframes * scs / 15)
+    ifftsize = nr_slot.get_FFT_IFFT_size(carrier_prbsize)
+    td_waveform_sample_rate_in_hz = ifftsize * scs * 1000
 
+    td_slotsize = int(ifftsize * 15)
+    td_waveform = np.zeros((num_of_ant, numofslots*td_slotsize), 'c8')
+
+    for idx in range(numofslots):
+        fd_slot_data, RE_usage_inslot = nr_slot.init_fd_slot(num_of_ant, carrier_prbsize)
+        
+        #get sfn and slot
+        sfn = startSFN + int((startslot+idx)//(scs/15*10))
+        slot = (startslot+idx) % int(scs/15*10)
+
+        for nrSSB in nrSSB_list:
+            fd_slot_data, RE_usage_inslot = nrSSB.process(fd_slot_data, RE_usage_inslot, sfn,slot)
+
+        for nrCSIRS in nrCSIRS_list:
+            fd_slot_data, RE_usage_inslot = nrCSIRS.process(fd_slot_data, RE_usage_inslot,sfn,slot)
+
+        #for nrSearchSpace in nrSearchSpace_list:
+        #    RE_usage_inslot = nrSearchSpace.process(RE_usage_inslot, sfn, slot)
+        
+        for nrPDCCH in nrPDCCH_list:
+            fd_slot_data, RE_usage_inslot = nrPDCCH.process(fd_slot_data, RE_usage_inslot,sfn,slot)
+
+        for nrPdsch in nrPdsch_list:
+            fd_slot_data, RE_usage_inslot = nrPdsch.process(fd_slot_data, RE_usage_inslot,slot)
+
+        #save final fd_slot_data to fd_waveform
+        fd_waveform[:, idx*fd_slotsize:(idx+1)*fd_slotsize] = fd_slot_data
+
+        ## start DL low phy processing for the slot
+        if len(Dm)==0:
+            td_slot = tx_lowphy_process.Tx_low_phy(fd_slot_data, carrier_config)
+        else:
+            td_slot = tx_lowphy_process.Tx_low_phy(fd_slot_data, carrier_config, Dm[idx])
+        
+        # slot level phase compensation
+        if central_freq_in_hz:
+            #carrier_frequency_in_mhz * 1e3 is usually even value, so slot_phase is always 1. we cam omit slot level phase compensation
+            if scs == 15:
+                # one slot = 1ms
+                slot_phase = np.exp(-1j * 2 * np.pi * central_freq_in_hz / 1e3 * idx)
+            else:
+                # one slot = 0.5ms
+                slot_phase = np.exp(-1j * 2 * np.pi * central_freq_in_hz / 1e3 / 2 * idx)
+            td_slot = td_slot*slot_phase
+        
+        td_waveform[:, idx*td_slotsize:(idx+1)*td_slotsize] = td_slot
+
+    ## start DUC processing,channel filter and oversample, output sample rate is fixed to 245.76MHz
+    #oversample_rate must be 1,2,4,8,..
+    dl_waveform = tx_lowphy_process.channel_filter(td_waveform, carrier_config, sample_rate_in_hz)
+    
+    return fd_waveform, td_waveform, dl_waveform,td_waveform_sample_rate_in_hz
+
+def gen_dl_channel_list(waveform_config, carrier_config, 
+                    ssb_config=[], 
+                    pdcch_config_list=[], 
+                    search_space_list=[], 
+                    coreset_config_list=[], 
+                    csirs_config_list=[], 
+                    pdsch_config_list=[],
+                    ):
+    """ generate DL frequency domain and time domain waveform
+    fd_waveform, td_waveform,dl_waveform = gen_dl_waveform()
+    input:
+        waveform_config:
+        carrier_config:
+        ssb_config:
+        Dm: each line is timing error for each symbol in the slot, there are total numofslots slots
+            this is used for fractional timing offset processing before IFFT
+    output:
+        fd_waveform: frequency waveform, num_of_ant X slot-size array
+        td_waveform: time waveform after IFT, add CP, phase compensation, num_of_ant X slot-size array
+                    sample rate = IFFT size * SCS
+        dl_waveform: time domain waveform after channel filter and interpolation, sample rate is defind in DL_waveform_config
+    """
+    #get info from waveform config
+    samplerate_in_mhz = waveform_config["samplerate_in_mhz"]
+    numofslots = waveform_config["numofslots"]
+    startSFN = waveform_config["startSFN"]
+    startslot = waveform_config["startslot"]
+    assert samplerate_in_mhz in [7.68, 15.36, 30.72, 61.44, 122.88, 245.76,245.76*2,245.76*4]
+    sample_rate_in_hz = int(samplerate_in_mhz*(10**6))
+
+    #get info from carrier config
+    num_of_ant = carrier_config["num_of_ant"]
+    central_freq_in_hz = int(carrier_config["carrier_frequency_in_mhz"] * (10**6))
+    scs = carrier_config['scs']
+    BW = carrier_config['BW']
+    carrier_prbsize = nr_slot.get_carrier_prb_size(scs, BW)
+    
     #create object lists
     nrSSB_list = []
-    if ssb_config['enable'] == "True":
+    if ssb_config and ssb_config['enable'] == "True":
         nrSSB = nr_ssb.NrSSB(carrier_config, ssb_config)
         nrSSB_list.append(nrSSB)
 
@@ -95,60 +197,7 @@ def gen_dl_waveform(waveform_config, carrier_config, ssb_config,
             nrPDCCH = nr_pdcch.Pdcch(pdcch_config, nrSearchSpace) 
             nrPDCCH_list.append(nrPDCCH)
     
-    #init
-    fd_slotsize = carrier_prbsize*12*14
-    fd_waveform = np.zeros((num_of_ant, numofslots*fd_slotsize), 'c8')
-
-    td_slotsize = int(sample_rate_in_hz / 1000*15/scs)
-    td_waveform = np.zeros((num_of_ant, numofslots*td_slotsize), 'c8')
-
-    for idx in range(numofslots):
-        fd_slot_data, RE_usage_inslot = nr_slot.init_fd_slot(num_of_ant, carrier_prbsize)
-        
-        #get sfn and slot
-        sfn = startSFN + int((startslot+idx)//(scs/15*10))
-        slot = (startslot+idx) % int(scs/15*10)
-
-        for nrSSB in nrSSB_list:
-            fd_slot_data, RE_usage_inslot = nrSSB.process(fd_slot_data, RE_usage_inslot, sfn,slot)
-
-        for nrCSIRS in nrCSIRS_list:
-            fd_slot_data, RE_usage_inslot = nrCSIRS.process(fd_slot_data, RE_usage_inslot,sfn,slot)
-
-        #for nrSearchSpace in nrSearchSpace_list:
-        #    RE_usage_inslot = nrSearchSpace.process(RE_usage_inslot, sfn, slot)
-        
-        for nrPDCCH in nrPDCCH_list:
-            fd_slot_data, RE_usage_inslot = nrPDCCH.process(fd_slot_data, RE_usage_inslot,sfn,slot)
-
-        for nrPdsch in nrPdsch_list:
-            fd_slot_data, RE_usage_inslot = nrPdsch.process(fd_slot_data, RE_usage_inslot,slot)
-
-        #save final fd_slot_data to fd_waveform
-        fd_waveform[:, idx*fd_slotsize:(idx+1)*fd_slotsize] = fd_slot_data
-
-        ## start DL low phy processing for the slot
-        td_slot = tx_lowphy_process.Tx_low_phy(fd_slot_data, carrier_config, sample_rate_in_hz)
-        
-        # slot level phase compensation
-        if central_freq_in_hz:
-            #carrier_frequency_in_mhz * 1e3 is usually even value, so slot_phase is always 1. we cam omit slot level phase compensation
-            if scs == 15:
-                # one slot = 1ms
-                slot_phase = np.exp(-1j * 2 * np.pi * central_freq_in_hz / 1e3 * idx)
-            else:
-                # one slot = 0.5ms
-                slot_phase = np.exp(-1j * 2 * np.pi * central_freq_in_hz / 1e3 / 2 * idx)
-            td_slot = td_slot*slot_phase
-        
-        td_waveform[:, idx*td_slotsize:(idx+1)*td_slotsize] = td_slot
-
-    ## start DUC processing,channel filter and oversample, output sample rate is fixed to 245.76MHz
-    #oversample_rate must be 1,2,4,8,..
-    dl_waveform = tx_lowphy_process.channel_filter(td_waveform, carrier_config, sample_rate_in_hz)
-    
-    return fd_waveform, td_waveform, dl_waveform
-
+    return nrSSB_list, nrPdsch_list, nrCSIRS_list, nrPDCCH_list
 
 if __name__ == "__main__":
     print("test nr DL waveform")

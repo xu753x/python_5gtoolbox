@@ -30,8 +30,8 @@ def ldpc_cbsegment(inbits, bgn):
             cb = inbits[c*cbz : (c+1)*cbz]
             blkandcrc = crc.nr_crc_encode(cb, '24B', 0)
             cbs[c,0 : cbz+L] = blkandcrc
-    
     return cbs, Zc
+
 
 if __name__ == "__main__":
     from scipy import io

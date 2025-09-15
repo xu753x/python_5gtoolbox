@@ -39,9 +39,17 @@ def test_nr_ldpc_raterecover(filename):
     k0 = matfile['k0'][0][0]
     kd = matfile['kd'][0][0]
     K = matfile['K'][0][0]
+    N = dn_ref.size
+
+    if K % 22 == 0:
+        #bgn = 1
+        Zc = K // 22
+    else:
+        #bgn = 2
+        Zc = K // 10
 
     LLRin = 1 - 2*fe.astype('i1')
-    LLRout = nr_ldpc_raterecover.raterecover_ldpc(LLRin, Ncb, K, kd, Ncb, E, k0, Qm)
+    LLRout = nr_ldpc_raterecover.raterecover_ldpc(LLRin, Ncb, N, k0, Qm,Zc, kd, K)
     outbits = (1-LLRout)/2
     outbits[outbits==0.5] = -1
 

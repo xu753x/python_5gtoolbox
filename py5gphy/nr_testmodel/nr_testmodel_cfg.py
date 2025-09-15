@@ -52,9 +52,9 @@ def gen_nr_TM_cfg(scs, BW, Duplex_mode, test_model,cell_id, carrier_frequency_in
     #Duration is 1 radio frame (10 ms) for FDD and 2 radio frames for TDD (20 ms)
     #from 38.141-1 4.9.2.2
     if Duplex_mode == 'TDD':
-        waveform_config['numofsubframes'] = 20
+        waveform_config['numofslots'] = int(20*scs/15)
     else:
-        waveform_config['numofsubframes'] = 10
+        waveform_config['numofslots'] = int(10*scs/15)
     samplerate_in_mhz = (scs * (2 ** np.ceil(np.log2(carrier_prb_size*12/0.85))) * 1000)/(10 ** 6)
     waveform_config['samplerate_in_mhz'] = samplerate_in_mhz
     waveform_config['startSFN'] = 0

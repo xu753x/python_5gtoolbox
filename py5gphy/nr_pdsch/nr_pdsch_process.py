@@ -33,7 +33,7 @@ def nr_pdsch_encode(g_seq, rnti, nID, Qm, num_of_layers, precoding_matrix, num_o
 
     #precoding
     precoded = np.zeros((num_of_ant, xi.shape[1]), 'c8')
-    if not precoding_matrix:
+    if precoding_matrix.size==0:
         precoded[0:num_of_layers,:] = xi
         return precoded
     
@@ -42,7 +42,7 @@ def nr_pdsch_encode(g_seq, rnti, nID, Qm, num_of_layers, precoding_matrix, num_o
     precoded = sel_pmi @ xi
 
     return precoded
-
+    
 if __name__ == "__main__":
     print("test nr pdsch encoder")
     precoding_matrix = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]

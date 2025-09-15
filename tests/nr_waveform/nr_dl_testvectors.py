@@ -64,7 +64,7 @@ def gen_DL_waveform_testvec_config(DL_tvcfg):
     with open(path + "default_search_space.json", 'r') as f:
         search_space_config = json.load(f)
     
-    waveform_config['numofsubframes'] = 20
+    waveform_config['numofslots'] = int(20*DL_tvcfg['scs']/15)
     waveform_config['samplerate_in_mhz'] = DL_tvcfg['SampleRate']/(1e6)
     waveform_config['startSFN'] = 0
     waveform_config['startslot'] = 0

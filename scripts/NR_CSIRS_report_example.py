@@ -70,7 +70,7 @@ carrier_config["maxMIMO_layers"] = nrofPorts
 carrier_config["BW"] = 40 #make sure carrier PRB size >=csirs_config["nrofRBs"]
 
 #waveform config
-waveform_config["numofsubframes"] = 10
+waveform_config["numofslots"] = int(10*carrier_config["scs"]/15)
 
 #simulation config
 SNRdB_list = [0,10,20] #SNR in dB list
@@ -109,7 +109,7 @@ for snr_dB in SNRdB_list:
 
         #low phy receiving processing for each slot
         scs = carrier_config["scs"]
-        num_slots = int(waveform_config["numofsubframes"]*scs/15)
+        num_slots = waveform_config["numofslots"]
         samples_in_one_slot = int(sample_rate_in_hz/1000*15/scs)
         for idx in range(num_slots):
             #get sfn and slot

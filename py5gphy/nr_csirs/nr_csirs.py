@@ -82,8 +82,7 @@ class NrCSIRS():
         """do channel estimation
         """
         pass
-
-    def RI_PMI_CQI
+    
 
 if __name__ == "__main__":
     print("test nr CSIRS class and waveform generation")

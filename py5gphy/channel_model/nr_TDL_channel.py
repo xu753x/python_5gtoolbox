@@ -1,10 +1,6 @@
 # -*- coding:utf-8 -*-
 import numpy as np
 
-from py5gphy.channel_model import nr_TDL_channel_model
-from py5gphy.channel_model import nr_TDL_channel_info
-from py5gphy.channel_model import MIMO_fading_channel
-
 def get_TDL_model_config(model,DSdesired,fm_inHz):
     """ return tapsm normalized delay, power in db, fading distribution
     
@@ -22,7 +18,7 @@ def get_TDL_model_config(model,DSdesired,fm_inHz):
    output:
    multi-path list,
    each multipath include:
-   delay in ns, power in dB, Rayleign or Rician, K in dB for Rician， fDo(doppler freq in hz) for Rician"
+   delay in ns, power in dB, Rayleigh or Rician, K in dB for Rician， fDo(doppler freq in hz) for Rician"
     """
     if model == 'TDL-A':
         tap_config = [
@@ -123,7 +119,7 @@ def get_TDL_model_config(model,DSdesired,fm_inHz):
             [4.042	,  -27.8 ],
             [7.937	,  -23.6 ],
             [9.424	,  -24.8 ],
-l            [12.525 ,  -27.7 ],
+            [12.525 ,  -27.7 ],
         ]
         #tap0 is Rician, other taps are Rayleigh
         #refer to 7.7.2 Tapped Delay Line (TDL) models, fDo for Rician = 0.7*fm(maxumim doppler freq)

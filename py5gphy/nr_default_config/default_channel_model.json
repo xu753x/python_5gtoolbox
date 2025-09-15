@@ -9,20 +9,14 @@
         "rho": 0,
         "comment": "maximum doppler frequency offset in Hz",
         "fm_inHz":0,
-        "comment": "MIMO correlation matrix",
-        "Rspat": [1],
-        "comment": "noise power in dB",
-        "Pnoise_dB": -10,
+        "comment": "MIMO correlation matrix, default value should be np.identity(Nt*Nr,'c8')",
+        "Rspat": [],
         "comment": "multi-path",
-        "comment":"delay in ns, power in dB, Rayleign or Rician, K in dB for Rician， fDo(doppler freq in hz) for Rician",
-        "multi_paths": [[0,0,"Rayleign",0,0],[0,0,"Rician",13.3,10]
+        "comment":"delay in ns, power in dB, Rayleigh or Rician, K in dB for Rician， fDo(doppler freq in hz) for Rician",
+        "multi_paths": [[0,0,"Rayleigh",0,0],[0,0,"Rician",13.3,10]
                     ],
-        "comment": "carrier frequency in Hz",
-        "fi_inHz": 2000000000,
-        "comment": "time domain data sample rate in Hz,[245760000, 491520000,983040000]",
-        "fs_inHz": 491520000,            
-        "comment": "subcarrier bandwidth, 15KHz or 30KHz",
-        "scs": 15,
+        "comment": "doppler freq, if multi_paths is empty, use this value",
+        "fDo_in_Hz": 0,
         "comment": "Number of sinusoids used to generate Rayleigh filter",
         "num_of_sinusoids": 50
 }

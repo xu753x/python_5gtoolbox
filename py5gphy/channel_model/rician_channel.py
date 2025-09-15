@@ -16,7 +16,7 @@ def gen_RicianChannel_filters(num_of_sample,K=0, fDo=0, fmax=0,samplerate_in_hz=
     if fmax =0, filter coefficient are the same for each sample
     input:
         num_of_sample: number of samples
-        K: Rician factor, if K=0, the output is Rayleigh filter
+        K: Rician factor in dB
         fmax: Maximum Doppler shift (Hz)
         samplerate_in_hz: Input signal sample rate (Hz)
         num_of_sinusoids: Number of sinusoids used to generate Rayleigh filter
@@ -35,7 +35,8 @@ def gen_RicianChannel_filters(num_of_sample,K=0, fDo=0, fmax=0,samplerate_in_hz=
     #generate num_of_sinusoids X num_of_sample matrix with each line data from 0 to num_of_sample-1
     LOS = np.exp(1j*(2*np.pi*fDo*Ts*np.arange(num_of_sample) + phase0))
 
-    rm = 1/np.sqrt(K+1)*cm + np.sqrt(K/(K+1))*LOS
+    Kv = 10**(K/10)
+    rm = 1/np.sqrt(Kv+1)*cm + np.sqrt(Kv/(Kv+1))*LOS
 
     return rm  
 

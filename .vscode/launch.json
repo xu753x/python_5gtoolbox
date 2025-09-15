@@ -12,7 +12,8 @@
             "python": "${workspaceFolder}/.venv/bin/python",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": true
+            "justMyCode": true,
+            "args": ["|"," tee", "debug_output.log"s]
         },
         {
             "name": "Python: run poetry pytest  under linux",

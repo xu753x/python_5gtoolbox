@@ -90,7 +90,7 @@ class NrSSB(object):
         """
         #get info from waveform config
         samplerate_in_mhz = waveform_config["samplerate_in_mhz"]
-        numofsubframes = waveform_config["numofsubframes"]
+        numofslots = waveform_config["numofslots"]
         startSFN = waveform_config["startSFN"]
         startslot = waveform_config["startslot"]
         assert samplerate_in_mhz in [7.68, 15.36, 30.72, 61.44, 122.88, 245.76]
@@ -130,9 +130,9 @@ class NrSSB(object):
         cptable = cptable.astype(int)
         
         #init output time domain waveform
-        td_waveform = np.zeros((num_of_ant, int(sample_rate_in_hz*numofsubframes/1000)), 'c8')
+        td_waveform = np.zeros((num_of_ant, int(sample_rate_in_hz*numofslots*15/ssbscs/1000)), 'c8')
 
-        num_ssb_slot = int(numofsubframes * ssbscs / 15)
+        num_ssb_slot = numofslots 
         for m in range(num_ssb_slot):
             #get sfn and slot
             sfn = startSFN + int((startslot+m)//(ssbscs/15*10))

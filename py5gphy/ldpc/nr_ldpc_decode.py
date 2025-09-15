@@ -39,7 +39,7 @@ def nr_decode_ldpc(LLRin, Zc, bgn, L, algo='min-sum',alpha=1, beta=0):
     #step 2 : get H
     H = ldpc_info.getH(Zc, bgn, iLS)
 
-    #add ounctured 2*Zc information bits to get full ldpc decoder input
+    #add punctured 2*Zc information bits to get full ldpc decoder input
     newLLRin = np.concatenate([np.zeros(2*Zc), LLRin])
 
     ck, status =  decode_ldpc(newLLRin, H, L, algo, alpha, beta)
@@ -210,6 +210,9 @@ def _min_sum_process(sel_Lq, A, Lr,m, alpha, beta):
         if zero_idx == 0:
             sign_prod = np.prod(np.sign(sel_Lq[1:]))
             min_v = np.min(np.abs(sel_Lq[1:]))
+        elif zero_idx == sel_Lq.size-1: #last bit is zero
+            sign_prod = np.prod(np.sign(sel_Lq[0:zero_idx]))
+            min_v = np.min(np.abs(sel_Lq[0:zero_idx]))
         else:
             sign_prod = np.prod(np.sign(sel_Lq[0:zero_idx]))*np.prod(np.sign(sel_Lq[zero_idx+1:]))
             min_v = min(np.min(np.abs(sel_Lq[0:zero_idx])),np.min(np.abs(sel_Lq[zero_idx+1:])))

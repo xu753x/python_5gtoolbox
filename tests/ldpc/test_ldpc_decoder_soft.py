@@ -31,7 +31,7 @@ def get_testvectors():
 def test_nr_ldpc_decode_BP(filename):
     """ test LDPC BP decoder"""
     #ldpc decoder parameters
-    snr_db = 3
+    snr_db = 30
     bler_target = 0.3 #very loose target to just make the test pass all the time
     max_count = 10
     L = 32
@@ -46,14 +46,14 @@ def test_nr_ldpc_decode_BP(filename):
     #test to verify bler <= bler_target
     failed_count = 0
     for _ in range(max_count):
-        en = 1 - 2*dn #BPSK modulation, 0 -> 1, 1 -> -1
+        en = 1 - 2*dn.astype('i1') #BPSK modulation, 0 -> 1, 1 -> -1
         fn = en + np.random.normal(0, 10**(-snr_db/20), dn.size) #add noise
         #LLR is log(P(0)/P(1)) = (-(x-1)^2+(x+1)^2)/(2*noise_power) = 4x/(2*noise_power) = 2x/noise_power
         noise_power = 10**(-snr_db/10)
         LLRin = 2*fn/noise_power
 
-        dn_decoded, status = nr_ldpc_decode.nr_decode_ldpc(LLRin, Zc, bgn, L, algo='BP')
-        if not np.array_equal(ck_ref,dn_decoded[0:ck_ref.size]):
+        ck_decoded,dn_decoded, status = nr_ldpc_decode.nr_decode_ldpc(LLRin, Zc, bgn, L, algo='BP')
+        if not np.array_equal(ck_ref,ck_decoded[0:ck_ref.size]):
             failed_count += 1
     
     bler = failed_count/max_count
