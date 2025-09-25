@@ -4,6 +4,7 @@ import numpy as np
 from py5gphy.channel_equalization import ZF
 from py5gphy.channel_equalization import MMSE
 from py5gphy.channel_equalization import ML
+from py5gphy.channel_equalization import ML2
 from py5gphy.channel_equalization import MMSE_ML
 from py5gphy.channel_equalization import opt_rank2_ML
 from py5gphy.demodulation import nr_Demodulation
@@ -39,6 +40,10 @@ def channel_equ_and_demod(Y, H, cov, modtype, CEQ_config):
         s_est, noise_var,de_hardbits, LLR_a = opt_rank2_ML.opt_rank2_ML(Y, H,  cov, modtype)
     elif CEQ_config["algo"] == "opt-rank2-ML-IRC":
         s_est, noise_var,de_hardbits, LLR_a = opt_rank2_ML.opt_rank2_ML_IRC(Y, H,  cov, modtype)
+    elif CEQ_config["algo"] == "ML2-IRC-soft":
+        s_est, noise_var,de_hardbits, LLR_a = ML2.ML_IRC(Y, H,  cov, modtype,"soft")
+    elif CEQ_config["algo"] == "ML2-soft":
+        s_est, noise_var,de_hardbits, LLR_a = ML2.ML(Y, H,  cov, modtype,"soft")
     else:
         assert 0  
     

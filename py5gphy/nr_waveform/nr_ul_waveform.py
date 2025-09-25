@@ -12,9 +12,8 @@ from py5gphy.nr_pucch import nr_pucch_format3
 from py5gphy.nr_pucch import nr_pucch_format4
 from py5gphy.nr_srs import nr_srs
 
-def gen_ul_waveform(waveform_config, carrier_config, pusch_config_list, srs_config_list,
-                    pucch_format0_config_list,pucch_format1_config_list,pucch_format2_config_list,
-                    pucch_format3_config_list,pucch_format4_config_list):
+def gen_ul_waveform(waveform_config, carrier_config, 
+                    nrPusch_list=[], nrSrs_list=[], nrPucchFormat0_list=[], nrPucchFormat1_list=[],nrPucchFormat2_list=[],nrPucchFormat3_list=[],nrPucchFormat4_list=[]):
     """ generate UL frequency domain and time domain waveform
     fd_waveform, td_waveform,ul_waveform = gen_ul_waveform()
     input:
@@ -25,6 +24,87 @@ def gen_ul_waveform(waveform_config, carrier_config, pusch_config_list, srs_conf
                     sample rate = IFFT size * SCS
         ul_waveform: time domain waveform after channel filter and interpolation, sample rate is defind in waveform_config
     """
+    #get info from waveform config
+    samplerate_in_mhz = waveform_config["samplerate_in_mhz"]
+    numofslots = waveform_config["numofslots"]
+    startSFN = waveform_config["startSFN"]
+    startslot = waveform_config["startslot"]
+    assert samplerate_in_mhz in [7.68, 15.36, 30.72, 61.44, 122.88, 245.76]
+    sample_rate_in_hz = int(samplerate_in_mhz*(10**6))
+
+    #get info from carrier config
+    num_of_ant = carrier_config["num_of_ant"]
+    central_freq_in_hz = int(carrier_config["carrier_frequency_in_mhz"] * (10**6))
+    scs = carrier_config['scs']
+    BW = carrier_config['BW']
+    carrier_prbsize = nr_slot.get_carrier_prb_size(scs, BW)
+        
+    #init
+    fd_slotsize = carrier_prbsize*12*14
+    fd_waveform = np.zeros((num_of_ant, numofslots*fd_slotsize), 'c8')
+
+    ifftsize = nr_slot.get_FFT_IFFT_size(carrier_prbsize)
+    td_waveform_sample_rate_in_hz = ifftsize * scs * 1000
+
+    td_slotsize = int(ifftsize * 15)
+    td_waveform = np.zeros((num_of_ant, numofslots*td_slotsize), 'c8')
+
+    for idx in range(numofslots):
+        fd_slot_data, RE_usage_inslot = nr_slot.init_fd_slot(num_of_ant, carrier_prbsize)
+        
+        #get sfn and slot
+        sfn = startSFN + int((startslot+idx)//(scs/15*10))
+        slot = (startslot+idx) % int(scs/15*10)
+
+        for nrPusch in nrPusch_list:
+            fd_slot_data, RE_usage_inslot = nrPusch.process(fd_slot_data, RE_usage_inslot, slot)
+        
+        for nrPucchFormat0 in nrPucchFormat0_list:
+            fd_slot_data, RE_usage_inslot = nrPucchFormat0.process(fd_slot_data, RE_usage_inslot, sfn,slot)
+        
+        for nrPucchFormat1 in nrPucchFormat1_list:
+            fd_slot_data, RE_usage_inslot = nrPucchFormat1.process(fd_slot_data, RE_usage_inslot, sfn,slot)
+        
+        for nrPucchFormat2 in nrPucchFormat2_list:
+            fd_slot_data, RE_usage_inslot = nrPucchFormat2.process(fd_slot_data, RE_usage_inslot, sfn,slot)
+        
+        for nrPucchFormat3 in nrPucchFormat3_list:
+            fd_slot_data, RE_usage_inslot = nrPucchFormat3.process(fd_slot_data, RE_usage_inslot, sfn,slot)
+        
+        for nrPucchFormat4 in nrPucchFormat4_list:
+            fd_slot_data, RE_usage_inslot = nrPucchFormat4.process(fd_slot_data, RE_usage_inslot, sfn,slot)
+        
+        for nrSrs in nrSrs_list:
+            fd_slot_data, RE_usage_inslot = nrSrs.process(fd_slot_data, RE_usage_inslot, sfn,slot)
+
+        #save final fd_slot_data to fd_waveform
+        fd_waveform[:, idx*fd_slotsize:(idx+1)*fd_slotsize] = fd_slot_data
+
+        ## start DL low phy processing for the slot
+        td_slot = tx_lowphy_process.Tx_low_phy(fd_slot_data, carrier_config)
+        
+        # slot level phase compensation
+        if central_freq_in_hz:
+            #carrier_frequency_in_mhz * 1e3 is usually even value, so slot_phase is always 1. we cam omit slot level phase compensation
+            if scs == 15:
+                # one slot = 1ms
+                slot_phase = np.exp(-1j * 2 * np.pi * central_freq_in_hz / 1e3 * idx)
+            else:
+                # one slot = 0.5ms
+                slot_phase = np.exp(-1j * 2 * np.pi * central_freq_in_hz / 1e3 / 2 * idx)
+            td_slot = td_slot*slot_phase
+        
+        td_waveform[:, idx*td_slotsize:(idx+1)*td_slotsize] = td_slot
+
+    ## start DUC processing,channel filter and oversample, output sample rate is fixed to 245.76MHz
+    #oversample_rate must be 1,2,4,8,..
+    ul_waveform = tx_lowphy_process.channel_filter(td_waveform, carrier_config, sample_rate_in_hz)
+    
+    return fd_waveform, td_waveform, ul_waveform
+
+def gen_ul_channel_list(waveform_config, carrier_config, pusch_config_list=[], srs_config_list=[],
+                    pucch_format0_config_list=[],pucch_format1_config_list=[],pucch_format2_config_list=[],
+                    pucch_format3_config_list=[],pucch_format4_config_list=[]):
     #get info from waveform config
     samplerate_in_mhz = waveform_config["samplerate_in_mhz"]
     numofslots = waveform_config["numofslots"]
@@ -83,65 +163,7 @@ def gen_ul_waveform(waveform_config, carrier_config, pusch_config_list, srs_conf
             nrPucchFormat4 = nr_pucch_format4.NrPUCCHFormat4(carrier_config,pucch_format4_config)
             nrPucchFormat4_list.append(nrPucchFormat4)
 
-    #init
-    fd_slotsize = carrier_prbsize*12*14
-    fd_waveform = np.zeros((num_of_ant, numofslots*fd_slotsize), 'c8')
-
-    td_slotsize = int(sample_rate_in_hz / 1000*15/scs)
-    td_waveform = np.zeros((num_of_ant, numofslots*td_slotsize), 'c8')
-
-    for idx in range(numofslots):
-        fd_slot_data, RE_usage_inslot = nr_slot.init_fd_slot(num_of_ant, carrier_prbsize)
-        
-        #get sfn and slot
-        sfn = startSFN + int((startslot+idx)//(scs/15*10))
-        slot = (startslot+idx) % int(scs/15*10)
-
-        for nrPusch in nrPusch_list:
-            fd_slot_data, RE_usage_inslot = nrPusch.process(fd_slot_data, RE_usage_inslot, slot)
-        
-        for nrPucchFormat0 in nrPucchFormat0_list:
-            fd_slot_data, RE_usage_inslot = nrPucchFormat0.process(fd_slot_data, RE_usage_inslot, sfn,slot)
-        
-        for nrPucchFormat1 in nrPucchFormat1_list:
-            fd_slot_data, RE_usage_inslot = nrPucchFormat1.process(fd_slot_data, RE_usage_inslot, sfn,slot)
-        
-        for nrPucchFormat2 in nrPucchFormat2_list:
-            fd_slot_data, RE_usage_inslot = nrPucchFormat2.process(fd_slot_data, RE_usage_inslot, sfn,slot)
-        
-        for nrPucchFormat3 in nrPucchFormat3_list:
-            fd_slot_data, RE_usage_inslot = nrPucchFormat3.process(fd_slot_data, RE_usage_inslot, sfn,slot)
-        
-        for nrPucchFormat4 in nrPucchFormat4_list:
-            fd_slot_data, RE_usage_inslot = nrPucchFormat4.process(fd_slot_data, RE_usage_inslot, sfn,slot)
-        
-        for nrSrs in nrSrs_list:
-            fd_slot_data, RE_usage_inslot = nrSrs.process(fd_slot_data, RE_usage_inslot, sfn,slot)
-
-        #save final fd_slot_data to fd_waveform
-        fd_waveform[:, idx*fd_slotsize:(idx+1)*fd_slotsize] = fd_slot_data
-
-        ## start DL low phy processing for the slot
-        td_slot = tx_lowphy_process.Tx_low_phy(fd_slot_data, carrier_config)
-        
-        # slot level phase compensation
-        if central_freq_in_hz:
-            #carrier_frequency_in_mhz * 1e3 is usually even value, so slot_phase is always 1. we cam omit slot level phase compensation
-            if scs == 15:
-                # one slot = 1ms
-                slot_phase = np.exp(-1j * 2 * np.pi * central_freq_in_hz / 1e3 * idx)
-            else:
-                # one slot = 0.5ms
-                slot_phase = np.exp(-1j * 2 * np.pi * central_freq_in_hz / 1e3 / 2 * idx)
-            td_slot = td_slot*slot_phase
-        
-        td_waveform[:, idx*td_slotsize:(idx+1)*td_slotsize] = td_slot
-
-    ## start DUC processing,channel filter and oversample, output sample rate is fixed to 245.76MHz
-    #oversample_rate must be 1,2,4,8,..
-    ul_waveform = tx_lowphy_process.channel_filter(td_waveform, carrier_config, sample_rate_in_hz)
-    
-    return fd_waveform, td_waveform, ul_waveform
+    return nrPusch_list, nrSrs_list, nrPucchFormat0_list, nrPucchFormat1_list,nrPucchFormat2_list,nrPucchFormat3_list,nrPucchFormat4_list
 
 if __name__ == "__main__":
     print("test nr UL waveform")

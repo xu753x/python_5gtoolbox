@@ -74,7 +74,7 @@ def ULSCHandUCIProcess(pusch_config, trblk, Gtotal, rv, DMRS_symlist):
     
     if EnableULSCH == 1:
         #ULSCH LDPC encode, rate matching and code block concatenation from 6.2.4 to 6.2.6
-        g_ulsch = nr_ulsch.ULSCH_ldpc_ratematch(cbs, Zc, bgn, Qm, RMinfo['G_ULSCH'], num_of_layers, rv)
+        g_ulsch = nr_ulsch.ULSCH_encoding_ratematch(cbs, Zc, bgn, Qm, RMinfo['G_ULSCH'], num_of_layers, rv)
     else:
         g_ulsch = np.array([])
 
