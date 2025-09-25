@@ -6,42 +6,56 @@ import pickle
 
 from scripts.internal import sim_pdsch_throughput_internal
 from py5gphy.common import nr_slot
-from py5gphy.nr_waveform import nr_dl_waveform
-from py5gphy.nr_pdsch import nr_pdsch
-from py5gphy.common import nr_slot
-from py5gphy.nr_lowphy import tx_lowphy_process
-from py5gphy.nr_lowphy import rx_lowphy_process
-from py5gphy.nr_pdsch import nr_pdsch_dmrs
 
 ##################### #parameters selected for the test ##################
-#test channel equaliztion algorithm performance , no channel estimation, no low-phy processing,
+#test channel equaliztion algorithm performance under AWGN channel,
 
-Nt, Nr = [1,1] #number of Tx antenna and Rx antenna
-mcs_idx = 2 #[1,5,11,20] for QPSK,16QAM,64QAM,256QAM
-pdsch_prb_size = 40 #
+Nt, Nr = [2,4] #number of Tx antenna and Rx antenna
+mcs_idx = 5 #[1,5,11,20] for QPSK,16QAM,64QAM,256QAM
+pdsch_prb_size = 20 #
 
-SNR_dB_list = np.arange(-2, 6, 0.5).tolist() #SNR power
+#channel
+channel_format = "customized" #"AWGN", "customized", "TDL"
+
+if channel_format == "AWGN": #AWGN
+    channel_parameter = ["AWGN",     0,          0,    0,      0,         0,       [0,0]]
+    #channel_parameter = ["AWGN",     0,          0,    0,      200,         0,       [0,0]]
+elif channel_format == "customized":
+    #channel_parameter = ["customized", "Rayleigh",  0,           0,   0,      0,       0,       [0,0] ]
+    channel_parameter = ["customized", "Rayleigh",  20,          0,   200,    0,       0,       [0.3,0.9] ]
+    #channel_parameter = ["customized", "Rician",    0,           0,   0,      100,     10,       [0.3,0.9] ]
+else:
+    #TDL
+    channel_parameter = ["TDL-A",     0,           0,   0,      0,       100,       [0,0] ]
+    #channel_parameter = ["TDL-D",     0,           0,   400,      0,       200,       [0,0] ],
+
+SNR_dB_list = np.arange(8, 12, 1).tolist() #SNR power
+
+#channel estimation parameters
+CE_config={"CE_algo":"DFT_symmetric","L_symm_left_in_ns":1400,"L_symm_right_in_ns":1200,"eRB":4,
+           "enable_TO_comp": True,"enable_FO_est": False,"enable_FO_comp": False}
 
 #channel equalization parameters
 #totally_supported_CEQ_algo_list = ["ZF", "ZF-IRC", "MMSE", "MMSE-IRC","ML-soft","ML-IRC-soft","ML-hard","ML-IRC-hard","MMSE-ML","MMSE-ML-IRC","opt-rank2-ML","opt-rank2-ML-IRC"]
 
-CEQ_algo_list = ["ZF-IRC","MMSE-IRC","ML-IRC-soft","MMSE-ML-IRC"]
-#CEQ_algo_list = ["MMSE-IRC","ML-soft"]
+#CEQ_algo_list = ["ZF", "ZF-IRC","MMSE","MMSE-IRC","ML-soft","ML-IRC-soft","ML-hard","ML-IRC-hard","MMSE-ML","MMSE-ML-IRC","opt-rank2-ML","opt-rank2-ML-IRC"]
+CEQ_algo_list = ["MMSE","MMSE-IRC","ML-IRC-soft","ML2-IRC-soft"]
+#CEQ_algo_list = ["MMSE-IRC"]
 
 #some general parameters
 carrier_freq= 3840 * 1e6 #3840MHz
 BW,scs = [40,30] #40MHz, 30KHz scs
 
 # Simulation configuration ######
-num_of_sim = 1 #number of simulation
+num_of_sim = 2 #number of simulation
 
 #this test takes very long time, we usually run the test once, then save the test results, then analyze the result.
 # 1 means run the test, after the test, set it to 0 to analyze the result
 sim_flag = 1 
 
 #test result dump to file
-save_filename = "out/nr_pdsch_throughput_2.pickle"
-figfile = "out/nr_pdsch_throughput_2.png" 
+save_filename = "out/nr_pdsch_throughput.pickle"
+figfile = "out/nr_pdsch_throughput.png" 
 ####################
 
 ########## generate configurations used for the test ###################
@@ -89,6 +103,7 @@ else:
 pdsch_config['DMRS']['DMRSAddPos'] = 1
 pdsch_config["precoding_matrix"] = np.empty(0)
 pdsch_config["data_source"] = [1,0,0,1]
+#pdsch_config["data_source"] = []
 pdsch_config["rv"] = [0]
 pdsch_config['StartSymbolIndex'] = 2
 pdsch_config['NrOfSymbols'] = 12
@@ -102,53 +117,35 @@ LDPC_decoder_config = {
 }
 
 ################# main procedure ###############
-#generate PDSCH class
-nrPdsch = nr_pdsch.Pdsch(pdsch_config, carrier_config)
-nrPdsch_list=[]
-nrPdsch_list.append(nrPdsch)
+with open("out/scrambled.pickle", 'rb') as handle:
+    ref_scrambled = pickle.load(handle)
 
-num_of_ant = carrier_config["num_of_ant"]
-
-#generate identity H_result and identitycov_m
-RE_num = pdsch_config["ResAlloType1"]["RBSize"] * 12
-H_result = np.zeros((14,RE_num,num_of_ant,num_of_ant),'c8')
-cov_m = np.zeros((14,RE_num,num_of_ant,num_of_ant),'c8')
-
-for nr in range(num_of_ant):
-    H_result[:,:,nr,nr] = 1
-    
+print(channel_parameter)
 if sim_flag:
     failed_counts = np.zeros((len(CEQ_algo_list),len(SNR_dB_list)),'i2')
     for m1,SNR_dB in enumerate(SNR_dB_list):
         Pnoise_dB = -SNR_dB
-        for nr in range(num_of_ant):
-            cov_m[:,:,nr,nr] = 10**(Pnoise_dB/10)
-
         for sim in range(num_of_sim):
-            fd_waveform, td_waveform, dl_waveform,td_waveform_sample_rate_in_hz = \
-                nr_dl_waveform.gen_dl_waveform(waveform_config,carrier_config,
-                                       nrPdsch_list=nrPdsch_list)
+            nrPdsch,rx_fdslot_data,slot,H_result,cov_m,nrChannelEstimation = \
+                sim_pdsch_throughput_internal.pdsch_before_CEQ_processing(waveform_config,carrier_config,   pdsch_config,channel_parameter,CE_config,Pnoise_dB)
 
-            rx_fdslot_data = fd_waveform + np.random.normal(0, 10**(Pnoise_dB/20)/np.sqrt(2), fd_waveform.shape) + \
-                1j * np.random.normal(0, 10**(Pnoise_dB/20)/np.sqrt(2), fd_waveform.shape)
-            
             for m2, CEQ_algo in enumerate(CEQ_algo_list):
                 CEQ_config={"algo":CEQ_algo}
 
                 start_time = time.time()
-                status,tbblk, new_LLr_dns = \
-                    nrPdsch.RX_process(rx_fdslot_data,waveform_config["startslot"],CEQ_config,H_result, cov_m,LDPC_decoder_config)
+                demod_LLRs = nrPdsch.RX_LLR_process(rx_fdslot_data,slot,CEQ_config,H_result, cov_m,LDPC_decoder_config,nrChannelEstimation)
                 end_time = time.time()
                 elapsed_time = end_time - start_time
 
-                #check result
-                mean_llr = np.mean(np.abs(new_LLr_dns))
-                if status:
-                    print(f"pass, sim={sim},{CEQ_algo}, SNR_dB={SNR_dB},Elapsed Time: {elapsed_time:.2f} seconds,mean_llr={mean_llr:.2f}")
-                else:
-                    failed_counts[m2,m1] += 1
-                    print(f"failed, sim={sim},{CEQ_algo}, SNR_dB={SNR_dB},Elapsed Time: {elapsed_time:.2f} seconds,mean_llr={mean_llr:.2f}")
+                #check BER
+                scrambled_bits = np.zeros(demod_LLRs.size,'i1')
+                scrambled_bits[demod_LLRs>0] = 0
+                scrambled_bits[demod_LLRs<0] = 1
                 
+                BER = np.sum(np.abs(ref_scrambled-scrambled_bits))/scrambled_bits.size
+                print(f"sim={sim},{CEQ_algo}, SNR_dB={SNR_dB},Elapsed Time: {elapsed_time:.2f} seconds,BER={BER:.4f}")
+                            
+            print("----------------")
     #get BLER
     bler_results = failed_counts / num_of_sim
 

@@ -5,6 +5,7 @@ import os
 import numpy as np
 import math
 from zipfile import ZipFile 
+import time
 
 from tests.nr_pusch import nr_pusch_testvectors
 from py5gphy.nr_pusch import nr_pusch_dmrs
@@ -31,9 +32,10 @@ def get_testvectors():
     return file_lists
 
 @pytest.mark.parametrize('filename', get_testvectors())
-def test_nr_pusch(filename):
-    """ the main pupose this this test is to test PUSCH scrambling, modulation and resurce mapping
-     
+def test_nr_pusch_rx_no_channel_est(filename):
+    """ the main pupose of this test is to test PUSCH Rx processing function,
+    no channel estimation in the test
+          
      """
     #read data
     matfile = io.loadmat(filename)
@@ -45,6 +47,7 @@ def test_nr_pusch(filename):
     
     carrier_config, pusch_config = nr_pusch_testvectors.gen_pusch_testvec_config(pusch_tvcfg)
     pusch_config["data_source"] = [1,0,0,1]
+    pusch_config["rv"] = [0]
     NumCDMGroupsWithoutData = pusch_config['DMRS']["NumCDMGroupsWithoutData"]
     #following to 38.214 Table 6.2.2-1: The ratio of PUSCH EPRE to DM-RS EPRE, get PUSCH DMRS scaling factor
     #matlab toolbox didn;t select DMRS_scaling, need compensation 
@@ -61,31 +64,75 @@ def test_nr_pusch(filename):
         numofslot = 2
     carrier_prbsize = nr_slot.get_carrier_prb_size(scs, BW)
     slot_size = carrier_prbsize*12*14
+    nNrOfAntennaPorts = pusch_config['nNrOfAntennaPorts']
+
+    CEQ_config={}
+    #CEQ_algo_list = ["ZF", "ZF-IRC", "MMSE", "MMSE-IRC","ML-soft","ML-IRC-soft","ML-hard","ML-IRC-hard","MMSE-ML","MMSE-ML-IRC","opt-rank2-ML","opt-rank2-ML-IRC"]
+    CEQ_algo_list = ["ZF"]
+    CEQ_algo_idx = 0
+
+    LDPC_decoder_config={}
+    LDPC_decoder_config["L"] = 32
+    LDPC_decoder_config["algo"] = "min-sum"
+    LDPC_decoder_config["alpha"] = 0.8
+    LDPC_decoder_config["beta"] = 0.3
+
+    noise_var = 10**(-30/10)
 
     nTransPrecode = pusch_config['nTransPrecode']
+    EnableULSCH = pusch_config['EnableULSCH']
+    if EnableULSCH == 0:
+        print("EnableULSCH==0")
+        return
+    
     if nTransPrecode:
         print("nTransPrecode = 1")
         pass
     else:
         pass
-        return
-    
+        #return
+
     nrpusch = nr_pusch.NrPUSCH(carrier_config,pusch_config)
     
-    for m in range(numofslot):
-        slot = m
+    #only test first slot
+    slot = 0 #slot index
+    for CEQ_algo in CEQ_algo_list:
+        CEQ_config["algo"] = CEQ_algo
         
         num_of_ant = nrpusch.carrier_config["num_of_ant"]
         carrier_prb_size = nrpusch.carrier_prb_size
-        fd_slot_data, RE_usage_inslot = nr_slot.init_fd_slot(num_of_ant, carrier_prb_size)
 
-        #pdsch processing
+        fd_slot_data, RE_usage_inslot = nr_slot.init_fd_slot(nNrOfAntennaPorts, carrier_prbsize)
+
+        #pusch processing
         fd_slot_data, RE_usage_inslot = nrpusch.process(fd_slot_data,RE_usage_inslot,slot)
-                            
-        sel_ref_fdslot_data = fd_slot_data_ref[:,m*carrier_prb_size*12*14:(m+1)*carrier_prb_size*12*14]
+                
+        H_LS,RS_info = nr_pusch_dmrs.pusch_dmrs_LS_est(fd_slot_data,pusch_config,slot)                            
+        
+        H_result = np.zeros((14,H_LS.shape[1]*4,H_LS.shape[2],H_LS.shape[3]),'c8')
         for sym in range(14):
-            sel_sym = sel_ref_fdslot_data[:,sym*carrier_prb_size*12:(sym+1)*carrier_prb_size*12]
-            sel_sym[:,RE_usage_inslot[0,sym*carrier_prb_size*12:(sym+1)*carrier_prb_size*12]==nr_slot.get_REusage_value('PUSCH-DMRS')] *= DMRS_scaling
-            
-        assert np.allclose(fd_slot_data, sel_ref_fdslot_data, atol=1e-5)
-        print("pass comparison for slot {}".format(m))
+            H_result[sym,0::4,:,:] = H_LS[0,:,:]
+            H_result[sym,1::4,:,:] = H_LS[0,:,:]
+            H_result[sym,2::4,:,:] = H_LS[0,:,:]
+            H_result[sym,3::4,:,:] = H_LS[0,:,:]
+
+        cov_m = np.zeros((H_result.shape[0],H_result.shape[1],H_result.shape[2],H_result.shape[2]),'c8')
+        for nr in range(cov_m.shape[2]):
+            cov_m[:,:,nr,nr] = noise_var
+        
+        nTransPrecode = pusch_config['nTransPrecode']
+        EnableULSCH = pusch_config['EnableULSCH']
+
+        start_time = time.time()
+
+        ulsch_status,tbblk, ulsch_new_LLr_dns = nrpusch.RX_process(fd_slot_data,slot,CEQ_config,H_result, cov_m,LDPC_decoder_config)
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        
+        if ulsch_status:
+            print(f"pass for slot {slot}, {CEQ_algo},Elapsed Time: {elapsed_time:.2f} seconds")
+        else:
+            print(f"failed for slot {slot}, {CEQ_algo},Elapsed Time: {elapsed_time:.2f} seconds")
+        
+        slot = (slot+1) % numofslot

@@ -4,7 +4,7 @@ import numpy as np
 
 from py5gphy.nr_pdsch import dl_tbsize
 from py5gphy.nr_pdsch import nr_dlsch
-from py5gphy.nr_pdsch import nr_dlsch_rx
+from py5gphy.nr_pdsch import nr_dlsch_decode
 from py5gphy.nr_pdsch import nr_pdsch_dmrs
 from py5gphy.nr_pdsch import nr_pdsch_process
 from py5gphy.nr_pdsch import nrpdsch_resource_mapping
@@ -218,7 +218,7 @@ class Pdsch():
         period_in_slot = self.pdsch_config['period_in_slot']
         allocated_slots = self.pdsch_config['allocated_slots']
         if (slot % period_in_slot) not in allocated_slots:
-            return False
+            return False, np.array([]), np.array([])
         
         StartSymbolIndex = self.pdsch_config['StartSymbolIndex']
         Qm = self.info["Qm"] #Qm in [2,4,6,8]
@@ -279,9 +279,68 @@ class Pdsch():
         rv = self.getnextrv()
 
         status,tbblk, new_LLr_dns = \
-            nr_dlsch_rx.DLSCHDecode(de_scramb_LLR,TBSize, Qm, coderateby1024, NL, rv, TBS_LBRM, LDPC_decoder_config,HARQ_on=False)
+            nr_dlsch_decode.DLSCHDecode(de_scramb_LLR,TBSize, Qm, coderateby1024, NL, rv, TBS_LBRM, LDPC_decoder_config,HARQ_on=False)
         
         return status,tbblk, new_LLr_dns
+    
+    def RX_LLR_process(self,rx_fd_slot_data, slot,CEQ_config,H_result, cov_m,LDPC_decoder_config,nrChannelEstimation=[]):
+        """ PDSCH receiving process
+        CE_config: channel estimation config
+        CEQ_config: channel equalization
+        """
+        #first check if this is PDSCH slot
+        period_in_slot = self.pdsch_config['period_in_slot']
+        allocated_slots = self.pdsch_config['allocated_slots']
+        if (slot % period_in_slot) not in allocated_slots:
+            return False
+        
+        StartSymbolIndex = self.pdsch_config['StartSymbolIndex']
+        Qm = self.info["Qm"] #Qm in [2,4,6,8]
+        modtype_list = {2:"qpsk", 4:"16qam", 6:"64qam", 8:"256qam", 10:"1024qam"}
+        modtype = modtype_list[Qm]
+        
+        #read PDSCH Rx resource
+        pdsch_resource,pdsch_RE_usage = \
+            nrpdsch_resource_mapping.copy_Rx_pdsch_resource(rx_fd_slot_data, self.pdsch_config)
+        
+        #PDSCH Rx resource may need timing offset compensation and freq offset compensation
+        if nrChannelEstimation:
+            pdsch_resource = nrChannelEstimation.process_pdsch_data(pdsch_resource,StartSymbolIndex)
+
+        #PDSCh channel equalization
+        NrOfSymbols,RE_num,Nr = pdsch_resource.shape
+        NL = self.pdsch_config["num_of_layers"]
+        ceq_o = np.zeros((NrOfSymbols, RE_num, NL),'c8')
+        noise_vars = np.zeros((NrOfSymbols, RE_num, NL),'c8')
+        #init demodulation LLR array with maximim possible size
+        demod_LLRs = np.zeros(NrOfSymbols*RE_num*NL*Qm)
+        demod_LLR_offset = 0
+
+        for m in range(NrOfSymbols):
+            sel_H = H_result[m+StartSymbolIndex,:,:,:]
+            sel_cov_m = cov_m[m+StartSymbolIndex,:,:,:]
+            for re in range(RE_num):
+                if pdsch_RE_usage[m,re] != 0: #not PDSCh data RE
+                    continue
+
+                Y = pdsch_resource[m,re,:]
+                prb = re // 12
+                H = sel_H[re,:,:]
+                cov = sel_cov_m[prb,:,:]
+                
+                s_est, noise_var, hardbits,LLR = nr_channel_eq.channel_equ_and_demod(Y, H, cov, modtype, CEQ_config)
+
+                demod_LLRs[demod_LLR_offset:demod_LLR_offset+LLR.size] = LLR
+                demod_LLR_offset += LLR.size
+                
+                ceq_o[m,re,:] = s_est 
+                noise_vars[m,re,:] = noise_var
+        
+        #puncture demod_LLRs to correct size
+        demod_LLRs = demod_LLRs[0:demod_LLR_offset]
+        
+        
+        return demod_LLRs
 
     def H_LS_est(self,fd_slot_data, slot):
         """ estimate H_LS"""
@@ -346,7 +405,7 @@ if __name__ == "__main__":
                         count += 1
                         test_nr_pdsch_rx_AWGN.test_nr_pdsch_rx_AWGN_basic(pdsch_carrier_testvectors, CE_config,channel_parameter,CEQ_algo)
                             
-    if 0:
+    if 1:
         print("test nr PDSCH Rx one tap")
         from tests.nr_pdsch import test_nr_pdsch_rx_one_tap_channel
         pdsch_carrier_testvectors_list = test_nr_pdsch_rx_one_tap_channel.get_pdsch_carrier_testvectors_list()

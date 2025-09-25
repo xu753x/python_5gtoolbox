@@ -1,19 +1,19 @@
 # -*- coding:utf-8 -*-
 
 import numpy as np
-import math
 
 from py5gphy.crc import crc
-from py5gphy.ldpc import nr_ldpc_decode
+from py5gphy.ldpc import nr_ldpc_encode
 from py5gphy.ldpc import nr_ldpc_cbsegment
 from py5gphy.ldpc import nr_ldpc_ratematch
 from py5gphy.ldpc import ldpc_info
+from py5gphy.ldpc import nr_ldpc_decode
 from py5gphy.ldpc import nr_ldpc_raterecover
 
-def DLSCHDecode(LLr,TBSize, Qm, coderateby1024, num_of_layers, rv, TBS_LBRM, LDPC_decoder_config,HARQ_on=False,current_LLr_dns=np.array([])):
-    """ DLSCH receiving processing, including de-rate matching, LDPC decoder,CRC decoder"""
-
-    G = LLr.size
+def ULSCH_decoding(g_ulsch_LLr,TBSize,coderateby1024, Qm, G_ULSCH, num_of_layers, rv,LDPC_decoder_config,HARQ_on=False,current_LLr_dns=np.array([])):
+    """decode ULSCH, including de-rate matching. ldpc decoding, CRC decoding
+    """
+    G = g_ulsch_LLr.size
     #get Transport block plus CRC size
     A = TBSize
     if A > 3824:
@@ -23,7 +23,7 @@ def DLSCHDecode(LLr,TBSize, Qm, coderateby1024, num_of_layers, rv, TBS_LBRM, LDP
         B=A+16
         tbcrcpoly = '16'
 
-    # 7.2.2 LDPC base graph selection
+    #6.2.2 LDPC base graph selection
     bgn = 1
     if (A <= 292) \
             or ((A <= 3824) and (coderateby1024 <= 0.67*1024)) \
@@ -46,14 +46,15 @@ def DLSCHDecode(LLr,TBSize, Qm, coderateby1024, num_of_layers, rv, TBS_LBRM, LDP
     else:
         N = 50 * Zc
 
-    # cal Ncb, I_LBRM=1 for DL SCH
-    Nref = math.floor(TBS_LBRM / (C * 2/3))
-    Ncb = min(N, Nref)
-
+    #6.2.5 rate matching
+    # cal Ncb, support I_LBRM=0 only for UL SCH
+    #3gpp spec support I_LBRM=0 and I_LBRM =1 case by setting limitedBufferRM
+    #but usually gNB side momory is assumed to be unlimited
+    Ncb = N
+    
     k0 = nr_ldpc_ratematch.get_k0(Ncb, bgn, rv, Zc)
 
-    #Er list is rate matching output len for each code block, this value could be different by 1 for different code block
-    Er_list = nr_ldpc_ratematch.get_Er_ldpc(G, C, Qm, num_of_layers)
+    Er_list = nr_ldpc_ratematch.get_Er_ldpc(G_ULSCH, C, Qm, num_of_layers)
 
     tbblkandcrc = np.zeros(B)
     tb_offset = 0
@@ -62,7 +63,7 @@ def DLSCHDecode(LLr,TBSize, Qm, coderateby1024, num_of_layers, rv, TBS_LBRM, LDP
     for c in range(C):
         E = Er_list[c]
         #get RM output code block
-        LLr_fe = LLr[g_offset:g_offset+E]
+        LLr_fe = g_ulsch_LLr[g_offset:g_offset+E]
         g_offset += E
 
         #de-rate matching
@@ -107,14 +108,3 @@ def DLSCHDecode(LLr,TBSize, Qm, coderateby1024, num_of_layers, rv, TBS_LBRM, LDP
     
 
     return tbcrc_error==0, tbblk, new_LLr_dns
-
-if __name__ == "__main__":
-    print("test nr DLSCH Rx processing")
-    from tests.nr_pdsch import test_nr_dlsch_rx
-    file_lists = test_nr_dlsch_rx.get_testvectors()
-
-    count = 1
-    for filename in file_lists:
-        print("count= {}, filename= {}".format(count, filename))
-        count += 1
-        test_nr_dlsch_rx.test_nr_dlsch_rx_with_matlab_Nref(filename)

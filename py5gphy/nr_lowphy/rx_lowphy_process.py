@@ -79,7 +79,7 @@ def Rx_low_phy(td_slot, carrier_config):
         # phase correction
         td_sym = td_slot[:, td_offset : td_offset+cptable[sym]+fftsize]
         if central_freq_in_hz:
-            #phase compensation only when central_freq_in_hz nonzero
+            #phase correction only when central_freq_in_hz nonzero
             delta = central_freq_in_hz / sample_rate_in_hz
             td_sym = td_sym * np.exp(1j * 2 * np.pi * delta * (td_offset + cptable[sym]))
         

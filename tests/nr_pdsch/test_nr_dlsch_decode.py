@@ -8,7 +8,7 @@ import math
 
 from tests.nr_pdsch import nr_pdsch_testvectors
 from py5gphy.nr_pdsch import nr_dlsch
-from py5gphy.nr_pdsch import nr_dlsch_rx
+from py5gphy.nr_pdsch import nr_dlsch_decode
 from py5gphy.nr_pdsch import nr_pdsch
 from py5gphy.crc import crc
 from py5gphy.ldpc import nr_ldpc_encode
@@ -100,7 +100,7 @@ def test_nr_dlsch_rx_with_matlab_Nref(filename):
         #g_seq = nr_dlsch.DLSCHEncode(trblk_out, len(trblk_out), Qmtable[Modulation], coderateby1024, 
         #                    NumLayers, rv_out[m], TBS_LBRM, G_out[m])
         
-        rx_status,rx_tbblk,new_LLr_dns = nr_dlsch_rx.DLSCHDecode(LLr,A, Qmtable[Modulation], coderateby1024, NumLayers, rv_out[m], TBS_LBRM, LDPC_decoder_config,HARQ_on,new_LLr_dns)
+        rx_status,rx_tbblk,new_LLr_dns = nr_dlsch_decode.DLSCHDecode(LLr,A, Qmtable[Modulation], coderateby1024, NumLayers, rv_out[m], TBS_LBRM, LDPC_decoder_config,HARQ_on,new_LLr_dns)
 
         #assert rx_status == True
         if rx_status:

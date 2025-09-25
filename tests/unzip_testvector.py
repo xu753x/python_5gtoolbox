@@ -10,7 +10,8 @@ import os
 
 print("start unzip testvectos")
 #testvectors_path =[ "tests/nr_pdsch/testvectors"]
-testvectors_path =[ "tests/nr_lowphy/testvectors"]
+#testvectors_path =[ "tests/nr_lowphy/testvectors"]
+testvectors_path =[ "tests/nr_pusch/testvectors_pusch"]
 
 for path in testvectors_path:
     zipfile_lists = []
